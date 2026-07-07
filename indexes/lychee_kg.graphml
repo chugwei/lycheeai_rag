@@ -1,0 +1,315 @@
+<?xml version='1.0' encoding='utf-8'?>
+<graphml xmlns="http://graphml.graphdrawing.org/xmlns" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://graphml.graphdrawing.org/xmlns http://graphml.graphdrawing.org/xmlns/1.0/graphml.xsd"><key id="d15" for="edge" attr.name="relation" attr.type="string"/>
+<key id="d14" for="node" attr.name="characteristic" attr.type="string"/>
+<key id="d13" for="node" attr.name="precautions" attr.type="string"/>
+<key id="d12" for="node" attr.name="dosage" attr.type="string"/>
+<key id="d11" for="node" attr.name="type" attr.type="string"/>
+<key id="d10" for="node" attr.name="key_characteristics" attr.type="string"/>
+<key id="d9" for="node" attr.name="month_range" attr.type="string"/>
+<key id="d8" for="node" attr.name="solar_term" attr.type="string"/>
+<key id="d7" for="node" attr.name="habit" attr.type="string"/>
+<key id="d6" for="node" attr.name="life_cycle" attr.type="string"/>
+<key id="d5" for="node" attr.name="symptom" attr.type="string"/>
+<key id="d4" for="node" attr.name="causes" attr.type="string"/>
+<key id="d3" for="node" attr.name="severity" attr.type="string"/>
+<key id="d2" for="node" attr.name="description" attr.type="string"/>
+<key id="d1" for="node" attr.name="alias" attr.type="string"/>
+<key id="d0" for="node" attr.name="label" attr.type="string"/>
+<graph edgedefault="directed"><node id="霜疫霉病">
+  <data key="d0">Disease</data>
+  <data key="d1">荔枝霜疫霉病</data>
+  <data key="d2">由荔枝霜疫霉菌引起，主要危害果实、花穗和嫩叶，是荔枝最严重的病害之一</data>
+  <data key="d3">高</data>
+  <data key="d4">连续阴雨、温度20-25°C、空气湿度&gt;85%时极易发生</data>
+  <data key="d5">果实表面出现褐色不规则病斑，湿度大时病斑上长出白色霉层，最终导致果实腐烂脱落</data>
+</node>
+<node id="炭疽病">
+  <data key="d0">Disease</data>
+  <data key="d1">荔枝炭疽病</data>
+  <data key="d2">由胶孢炭疽菌引起，危害果实、叶片和嫩梢</data>
+  <data key="d3">中</data>
+  <data key="d4">高温高湿环境，25-32°C时发病严重，伤口感染</data>
+  <data key="d5">果实表面出现褐色凹陷病斑，后期病斑上产生粉红色黏孢子团</data>
+</node>
+<node id="酸腐病">
+  <data key="d0">Disease</data>
+  <data key="d1">荔枝酸腐病</data>
+  <data key="d2">由白地霉菌引起，主要危害成熟果实</data>
+  <data key="d3">中</data>
+  <data key="d4">果实成熟期高温高湿，虫害伤口感染</data>
+  <data key="d5">果肉变酸腐烂，流出酸臭汁液，果皮变褐</data>
+</node>
+<node id="溃疡病">
+  <data key="d0">Disease</data>
+  <data key="d1">荔枝溃疡病</data>
+  <data key="d2">危害枝干和叶片，造成树势衰弱</data>
+  <data key="d3">中</data>
+  <data key="d4">树体伤口感染，管理粗放</data>
+  <data key="d5">枝干上出现溃疡状病斑，皮层坏死开裂</data>
+</node>
+<node id="蒂蛀虫">
+  <data key="d0">Pest</data>
+  <data key="d1">荔枝蒂蛀虫</data>
+  <data key="d2">荔枝最重要的害虫，幼虫蛀入果实危害</data>
+  <data key="d6">一年发生10-11代，世代重叠</data>
+  <data key="d7">幼虫蛀食果实蒂部，导致落果；成虫昼伏夜出</data>
+</node>
+<node id="荔枝蝽">
+  <data key="d0">Pest</data>
+  <data key="d1">蝽象</data>
+  <data key="d2">刺吸式害虫，吸食嫩梢、花穗和幼果汁液</data>
+  <data key="d6">一年发生1代，以成虫越冬</data>
+  <data key="d7">成虫和若虫吸食汁液，导致落花落果，分泌臭液</data>
+</node>
+<node id="卷叶蛾">
+  <data key="d0">Pest</data>
+  <data key="d1">荔枝卷叶蛾</data>
+  <data key="d2">幼虫吐丝卷叶危害嫩叶和幼果</data>
+  <data key="d6">一年发生5-6代</data>
+  <data key="d7">幼虫卷叶取食，也蛀食幼果</data>
+</node>
+<node id="蓟马">
+  <data key="d0">Pest</data>
+  <data key="d1">荔枝蓟马</data>
+  <data key="d2">吸食嫩梢和花穗汁液</data>
+  <data key="d6">一年发生多代，世代重叠</data>
+  <data key="d7">成虫和若虫锉吸嫩叶、花穗汁液，造成叶片卷曲</data>
+</node>
+<node id="秋梢萌动">
+  <data key="d0">Phenology</data>
+  <data key="d8">立秋</data>
+  <data key="d9">7-9月</data>
+  <data key="d10">秋梢抽发生长，培养结果母枝</data>
+</node>
+<node id="秋梢老熟">
+  <data key="d0">Phenology</data>
+  <data key="d8">秋分</data>
+  <data key="d9">9-11月</data>
+  <data key="d10">秋梢停止生长，积累养分</data>
+</node>
+<node id="花芽分化">
+  <data key="d0">Phenology</data>
+  <data key="d8">立冬</data>
+  <data key="d9">11-1月</data>
+  <data key="d10">花芽生理分化和形态分化</data>
+</node>
+<node id="花穗生长期">
+  <data key="d0">Phenology</data>
+  <data key="d8">雨水</data>
+  <data key="d9">2-3月</data>
+  <data key="d10">花穗抽生和发育</data>
+</node>
+<node id="开花期">
+  <data key="d0">Phenology</data>
+  <data key="d8">春分</data>
+  <data key="d9">3-4月</data>
+  <data key="d10">雌花开放、授粉受精、坐果</data>
+</node>
+<node id="幼果期">
+  <data key="d0">Phenology</data>
+  <data key="d8">清明</data>
+  <data key="d9">4-5月</data>
+  <data key="d10">果实细胞分裂和膨大初期</data>
+</node>
+<node id="果实膨大期">
+  <data key="d0">Phenology</data>
+  <data key="d8">小满</data>
+  <data key="d9">5-6月</data>
+  <data key="d10">果实快速膨大、种核发育</data>
+</node>
+<node id="成熟期">
+  <data key="d0">Phenology</data>
+  <data key="d8">夏至</data>
+  <data key="d9">6-7月</data>
+  <data key="d10">果实成熟、糖分积累、转色</data>
+</node>
+<node id="休眠期">
+  <data key="d0">Phenology</data>
+  <data key="d8">冬至</data>
+  <data key="d9">12-2月</data>
+  <data key="d10">树体相对休眠，养分回流</data>
+</node>
+<node id="化学防治">
+  <data key="d0">Control</data>
+  <data key="d11">化学</data>
+  <data key="d2">使用化学农药防治病虫害</data>
+</node>
+<node id="生物防治">
+  <data key="d0">Control</data>
+  <data key="d11">生物</data>
+  <data key="d2">利用天敌、生物农药防治</data>
+</node>
+<node id="农业防治">
+  <data key="d0">Control</data>
+  <data key="d11">农业</data>
+  <data key="d2">通过栽培管理措施防治</data>
+</node>
+<node id="物理防治">
+  <data key="d0">Control</data>
+  <data key="d11">物理</data>
+  <data key="d2">利用物理手段（杀虫灯、粘虫板）防治</data>
+</node>
+<node id="修剪清园">
+  <data key="d0">Control</data>
+  <data key="d11">农业</data>
+  <data key="d2">修剪病虫枝、清理落叶落果</data>
+</node>
+<node id="水肥管理">
+  <data key="d0">Control</data>
+  <data key="d11">农业</data>
+  <data key="d2">科学施肥灌溉增强树势</data>
+</node>
+<node id="套袋保护">
+  <data key="d0">Control</data>
+  <data key="d11">物理</data>
+  <data key="d2">果实套袋防止虫害</data>
+</node>
+<node id="波尔多液">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀菌剂</data>
+  <data key="d2">防治霜疫霉病、炭疽病</data>
+  <data key="d12">1:1:200倍液</data>
+  <data key="d13">现配现用，避免与酸性农药混用</data>
+</node>
+<node id="多菌灵">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀菌剂</data>
+  <data key="d2">广谱杀菌剂，防治炭疽病</data>
+  <data key="d12">50%可湿性粉剂1000倍液</data>
+  <data key="d13">安全间隔期15天</data>
+</node>
+<node id="甲基托布津">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀菌剂</data>
+  <data key="d2">防治炭疽病、酸腐病</data>
+  <data key="d12">70%可湿性粉剂800倍液</data>
+  <data key="d13">安全间隔期14天</data>
+</node>
+<node id="代森锰锌">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀菌剂</data>
+  <data key="d2">防治霜疫霉病</data>
+  <data key="d12">80%可湿性粉剂600倍液</data>
+  <data key="d13">安全间隔期15天</data>
+</node>
+<node id="氯氰菊酯">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀虫剂</data>
+  <data key="d2">防治蒂蛀虫</data>
+  <data key="d12">10%乳油2000倍液</data>
+  <data key="d13">安全间隔期21天</data>
+</node>
+<node id="吡虫啉">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀虫剂</data>
+  <data key="d2">防治蓟马、蚜虫</data>
+  <data key="d12">10%可湿性粉剂2000倍液</data>
+  <data key="d13">安全间隔期14天</data>
+</node>
+<node id="阿维菌素">
+  <data key="d0">Chemical</data>
+  <data key="d11">杀虫剂</data>
+  <data key="d2">防治红蜘蛛、潜叶蛾</data>
+  <data key="d12">1.8%乳油3000倍液</data>
+  <data key="d13">安全间隔期21天</data>
+</node>
+<node id="桂味">
+  <data key="d0">Variety</data>
+  <data key="d14">果肉清甜有桂花香，品质极佳，6月下旬至7月上旬成熟</data>
+</node>
+<node id="糯米糍">
+  <data key="d0">Variety</data>
+  <data key="d14">果肉厚、味甜、核小，6月下旬至7月上旬成熟，易裂果</data>
+</node>
+<node id="妃子笑">
+  <data key="d0">Variety</data>
+  <data key="d14">果大、色艳、味甜，5月下旬至6月上旬成熟，早熟优质</data>
+</node>
+<node id="白糖罂">
+  <data key="d0">Variety</data>
+  <data key="d14">果肉爽脆清甜，5月中下旬成熟，早熟品种</data>
+</node>
+<node id="黑叶">
+  <data key="d0">Variety</data>
+  <data key="d14">果肉蜡白色、味甜带香，6月中旬成熟，中熟品种</data>
+</node>
+<node id="增城挂绿">
+  <data key="d0">Variety</data>
+  <data key="d14">果皮暗红带绿线，果肉爽脆清甜，品质极优，珍稀品种</data>
+</node>
+<edge source="霜疫霉病" target="果实膨大期">
+  <data key="d15">SUSCEPTIBLE_PERIOD</data>
+</edge>
+<edge source="霜疫霉病" target="成熟期">
+  <data key="d15">SUSCEPTIBLE_PERIOD</data>
+</edge>
+<edge source="霜疫霉病" target="化学防治">
+  <data key="d15">TREATED_BY</data>
+</edge>
+<edge source="霜疫霉病" target="代森锰锌">
+  <data key="d15">USE_CHEMICAL</data>
+</edge>
+<edge source="霜疫霉病" target="波尔多液">
+  <data key="d15">USE_CHEMICAL</data>
+</edge>
+<edge source="霜疫霉病" target="糯米糍">
+  <data key="d15">AFFECT_VARIETY</data>
+</edge>
+<edge source="炭疽病" target="幼果期">
+  <data key="d15">SUSCEPTIBLE_PERIOD</data>
+</edge>
+<edge source="炭疽病" target="成熟期">
+  <data key="d15">SUSCEPTIBLE_PERIOD</data>
+</edge>
+<edge source="炭疽病" target="化学防治">
+  <data key="d15">TREATED_BY</data>
+</edge>
+<edge source="炭疽病" target="多菌灵">
+  <data key="d15">USE_CHEMICAL</data>
+</edge>
+<edge source="炭疽病" target="甲基托布津">
+  <data key="d15">USE_CHEMICAL</data>
+</edge>
+<edge source="酸腐病" target="成熟期">
+  <data key="d15">SUSCEPTIBLE_PERIOD</data>
+</edge>
+<edge source="酸腐病" target="甲基托布津">
+  <data key="d15">USE_CHEMICAL</data>
+</edge>
+<edge source="蒂蛀虫" target="果实膨大期">
+  <data key="d15">ACTIVE_IN</data>
+</edge>
+<edge source="蒂蛀虫" target="成熟期">
+  <data key="d15">ACTIVE_IN</data>
+</edge>
+<edge source="蒂蛀虫" target="化学防治">
+  <data key="d15">TREATED_BY</data>
+</edge>
+<edge source="蒂蛀虫" target="氯氰菊酯">
+  <data key="d15">USE_CHEMICAL</data>
+</edge>
+<edge source="蒂蛀虫" target="物理防治">
+  <data key="d15">TREATED_BY</data>
+</edge>
+<edge source="蒂蛀虫" target="套袋保护">
+  <data key="d15">TREATED_BY</data>
+</edge>
+<edge source="荔枝蝽" target="开花期">
+  <data key="d15">ACTIVE_IN</data>
+</edge>
+<edge source="荔枝蝽" target="幼果期">
+  <data key="d15">ACTIVE_IN</data>
+</edge>
+<edge source="荔枝蝽" target="化学防治">
+  <data key="d15">TREATED_BY</data>
+</edge>
+<edge source="桂味" target="成熟期">
+  <data key="d15">RELATED_TO</data>
+</edge>
+<edge source="糯米糍" target="霜疫霉病">
+  <data key="d15">RELATED_TO</data>
+</edge>
+<edge source="妃子笑" target="开花期">
+  <data key="d15">RELATED_TO</data>
+</edge>
+</graph></graphml>

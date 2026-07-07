@@ -1,0 +1,156 @@
+{
+  "diseases": [
+    {
+      "name": "霜疫霉病",
+      "alias": "荔枝霜疫霉病",
+      "description": "由荔枝霜疫霉菌引起，主要危害果实、花穗和嫩叶，是荔枝最严重的病害之一",
+      "severity": "高",
+      "causes": "连续阴雨、温度20-25°C、空气湿度>85%时极易发生",
+      "symptom": "果实表面出现褐色不规则病斑，湿度大时病斑上长出白色霉层，最终导致果实腐烂脱落"
+    },
+    {
+      "name": "炭疽病",
+      "alias": "荔枝炭疽病",
+      "description": "由胶孢炭疽菌引起，危害果实、叶片和嫩梢",
+      "severity": "中",
+      "causes": "高温高湿环境，25-32°C时发病严重，伤口感染",
+      "symptom": "果实表面出现褐色凹陷病斑，后期病斑上产生粉红色黏孢子团"
+    },
+    {
+      "name": "酸腐病",
+      "alias": "荔枝酸腐病",
+      "description": "由白地霉菌引起，主要危害成熟果实",
+      "severity": "中",
+      "causes": "果实成熟期高温高湿，虫害伤口感染",
+      "symptom": "果肉变酸腐烂，流出酸臭汁液，果皮变褐"
+    },
+    {
+      "name": "溃疡病",
+      "alias": "荔枝溃疡病",
+      "description": "危害枝干和叶片，造成树势衰弱",
+      "severity": "中",
+      "causes": "树体伤口感染，管理粗放",
+      "symptom": "枝干上出现溃疡状病斑，皮层坏死开裂"
+    }
+  ],
+  "pests": [
+    {
+      "name": "蒂蛀虫",
+      "alias": "荔枝蒂蛀虫",
+      "description": "荔枝最重要的害虫，幼虫蛀入果实危害",
+      "life_cycle": "一年发生10-11代，世代重叠",
+      "habit": "幼虫蛀食果实蒂部，导致落果；成虫昼伏夜出"
+    },
+    {
+      "name": "荔枝蝽",
+      "alias": "蝽象",
+      "description": "刺吸式害虫，吸食嫩梢、花穗和幼果汁液",
+      "life_cycle": "一年发生1代，以成虫越冬",
+      "habit": "成虫和若虫吸食汁液，导致落花落果，分泌臭液"
+    },
+    {
+      "name": "卷叶蛾",
+      "alias": "荔枝卷叶蛾",
+      "description": "幼虫吐丝卷叶危害嫩叶和幼果",
+      "life_cycle": "一年发生5-6代",
+      "habit": "幼虫卷叶取食，也蛀食幼果"
+    },
+    {
+      "name": "蓟马",
+      "alias": "荔枝蓟马",
+      "description": "吸食嫩梢和花穗汁液",
+      "life_cycle": "一年发生多代，世代重叠",
+      "habit": "成虫和若虫锉吸嫩叶、花穗汁液，造成叶片卷曲"
+    }
+  ],
+  "phenologies": [
+    {"name": "秋梢萌动", "solar_term": "立秋", "month_range": "7-9月",
+     "key_characteristics": "秋梢抽发生长，培养结果母枝"},
+    {"name": "秋梢老熟", "solar_term": "秋分", "month_range": "9-11月",
+     "key_characteristics": "秋梢停止生长，积累养分"},
+    {"name": "花芽分化", "solar_term": "立冬", "month_range": "11-1月",
+     "key_characteristics": "花芽生理分化和形态分化"},
+    {"name": "花穗生长期", "solar_term": "雨水", "month_range": "2-3月",
+     "key_characteristics": "花穗抽生和发育"},
+    {"name": "开花期", "solar_term": "春分", "month_range": "3-4月",
+     "key_characteristics": "雌花开放、授粉受精、坐果"},
+    {"name": "幼果期", "solar_term": "清明", "month_range": "4-5月",
+     "key_characteristics": "果实细胞分裂和膨大初期"},
+    {"name": "果实膨大期", "solar_term": "小满", "month_range": "5-6月",
+     "key_characteristics": "果实快速膨大、种核发育"},
+    {"name": "成熟期", "solar_term": "夏至", "month_range": "6-7月",
+     "key_characteristics": "果实成熟、糖分积累、转色"},
+    {"name": "休眠期", "solar_term": "冬至", "month_range": "12-2月",
+     "key_characteristics": "树体相对休眠，养分回流"}
+  ],
+  "controls": [
+    {"name": "化学防治", "type": "化学", "description": "使用化学农药防治病虫害"},
+    {"name": "生物防治", "type": "生物", "description": "利用天敌、生物农药防治"},
+    {"name": "农业防治", "type": "农业", "description": "通过栽培管理措施防治"},
+    {"name": "物理防治", "type": "物理", "description": "利用物理手段（杀虫灯、粘虫板）防治"},
+    {"name": "修剪清园", "type": "农业", "description": "修剪病虫枝、清理落叶落果"},
+    {"name": "水肥管理", "type": "农业", "description": "科学施肥灌溉增强树势"},
+    {"name": "套袋保护", "type": "物理", "description": "果实套袋防止虫害"}
+  ],
+  "chemicals": [
+    {"name": "波尔多液", "type": "杀菌剂", "description": "防治霜疫霉病、炭疽病",
+     "dosage": "1:1:200倍液", "precautions": "现配现用，避免与酸性农药混用"},
+    {"name": "多菌灵", "type": "杀菌剂", "description": "广谱杀菌剂，防治炭疽病",
+     "dosage": "50%可湿性粉剂1000倍液", "precautions": "安全间隔期15天"},
+    {"name": "甲基托布津", "type": "杀菌剂", "description": "防治炭疽病、酸腐病",
+     "dosage": "70%可湿性粉剂800倍液", "precautions": "安全间隔期14天"},
+    {"name": "代森锰锌", "type": "杀菌剂", "description": "防治霜疫霉病",
+     "dosage": "80%可湿性粉剂600倍液", "precautions": "安全间隔期15天"},
+    {"name": "氯氰菊酯", "type": "杀虫剂", "description": "防治蒂蛀虫",
+     "dosage": "10%乳油2000倍液", "precautions": "安全间隔期21天"},
+    {"name": "吡虫啉", "type": "杀虫剂", "description": "防治蓟马、蚜虫",
+     "dosage": "10%可湿性粉剂2000倍液", "precautions": "安全间隔期14天"},
+    {"name": "阿维菌素", "type": "杀虫剂", "description": "防治红蜘蛛、潜叶蛾",
+     "dosage": "1.8%乳油3000倍液", "precautions": "安全间隔期21天"}
+  ],
+  "varieties": [
+    {"name": "桂味", "characteristic": "果肉清甜有桂花香，品质极佳，6月下旬至7月上旬成熟"},
+    {"name": "糯米糍", "characteristic": "果肉厚、味甜、核小，6月下旬至7月上旬成熟，易裂果"},
+    {"name": "妃子笑", "characteristic": "果大、色艳、味甜，5月下旬至6月上旬成熟，早熟优质"},
+    {"name": "白糖罂", "characteristic": "果肉爽脆清甜，5月中下旬成熟，早熟品种"},
+    {"name": "黑叶", "characteristic": "果肉蜡白色、味甜带香，6月中旬成熟，中熟品种"},
+    {"name": "增城挂绿", "characteristic": "果皮暗红带绿线，果肉爽脆清甜，品质极优，珍稀品种"}
+  ],
+  "relationships": [
+    {"source": "霜疫霉病", "target": "果实膨大期", "type": "SUSCEPTIBLE_PERIOD"},
+    {"source": "霜疫霉病", "target": "成熟期", "type": "SUSCEPTIBLE_PERIOD"},
+    {"source": "霜疫霉病", "target": "果实表面出现褐色不规则病斑", "type": "HAS_SYMPTOM"},
+    {"source": "霜疫霉病", "target": "化学防治", "type": "TREATED_BY"},
+    {"source": "霜疫霉病", "target": "代森锰锌", "type": "USE_CHEMICAL"},
+    {"source": "霜疫霉病", "target": "波尔多液", "type": "USE_CHEMICAL"},
+    {"source": "霜疫霉病", "target": "糯米糍", "type": "AFFECT_VARIETY"},
+
+    {"source": "炭疽病", "target": "幼果期", "type": "SUSCEPTIBLE_PERIOD"},
+    {"source": "炭疽病", "target": "成熟期", "type": "SUSCEPTIBLE_PERIOD"},
+    {"source": "炭疽病", "target": "果实表面出现褐色凹陷病斑", "type": "HAS_SYMPTOM"},
+    {"source": "炭疽病", "target": "化学防治", "type": "TREATED_BY"},
+    {"source": "炭疽病", "target": "多菌灵", "type": "USE_CHEMICAL"},
+    {"source": "炭疽病", "target": "甲基托布津", "type": "USE_CHEMICAL"},
+
+    {"source": "蒂蛀虫", "target": "果实膨大期", "type": "ACTIVE_IN"},
+    {"source": "蒂蛀虫", "target": "成熟期", "type": "ACTIVE_IN"},
+    {"source": "蒂蛀虫", "target": "幼虫蛀入果实导致落果", "type": "HAS_SYMPTOM"},
+    {"source": "蒂蛀虫", "target": "化学防治", "type": "TREATED_BY"},
+    {"source": "蒂蛀虫", "target": "氯氰菊酯", "type": "USE_CHEMICAL"},
+    {"source": "蒂蛀虫", "target": "物理防治", "type": "TREATED_BY"},
+    {"source": "蒂蛀虫", "target": "套袋保护", "type": "TREATED_BY"},
+
+    {"source": "荔枝蝽", "target": "开花期", "type": "ACTIVE_IN"},
+    {"source": "荔枝蝽", "target": "幼果期", "type": "ACTIVE_IN"},
+    {"source": "荔枝蝽", "target": "落花落果", "type": "HAS_SYMPTOM"},
+    {"source": "荔枝蝽", "target": "化学防治", "type": "TREATED_BY"},
+
+    {"source": "酸腐病", "target": "成熟期", "type": "SUSCEPTIBLE_PERIOD"},
+    {"source": "酸腐病", "target": "果肉变酸腐烂", "type": "HAS_SYMPTOM"},
+    {"source": "酸腐病", "target": "甲基托布津", "type": "USE_CHEMICAL"},
+
+    {"source": "桂味", "target": "成熟期", "type": "RELATED_TO"},
+    {"source": "糯米糍", "target": "霜疫霉病", "type": "RELATED_TO"},
+    {"source": "妃子笑", "target": "开花期", "type": "RELATED_TO"}
+  ]
+}

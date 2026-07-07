@@ -1,0 +1,199 @@
+# ===================================================================
+# LycheeAI 荔知君 RAG系统 全局配置
+# ===================================================================
+
+# -------------------- 服务配置 --------------------
+server:
+  host: "0.0.0.0"
+  api_port: 18888          # FastAPI 后端端口
+  frontend_port: 8502     # Gradio 前端端口
+  streamlit_port: 8501    # Streamlit 前端端口（经典版）
+  debug: true
+
+# -------------------- LLM 大模型配置 --------------------
+# 三后端: 外部API(云服务优先) + OpenAI 兼容推理(本地GPU备选) + Ollama(降级备选)
+llm:
+  # 后端选择: "external" | "openai" | "ollama" | "auto" (自动检测, external优先)
+  backend: "external"
+
+  # ── 外部 LLM 配置 (默认推理后端: DeepSeek-v4-Flash via SenseNova) ──
+  external:
+    # 外部 LLM API 地址 (OpenAI 兼容格式)
+    base_url: "https://token.sensenova.cn/v1"
+    # API 密钥 (支持环境变量 ${VAR_NAME} 格式)
+    api_key: "${EXTERNAL_API_KEY}"
+    # 模型名称
+    model: "deepseek-v4-flash" #sensenova-6.7-flash-lite
+
+  # ── OpenAI 兼容推理配置 (Transformers + FastAPI, 本地GPU备选) ──
+  openai:
+    # OpenAI 兼容 API 地址 (openai_server.py 默认 --port 8001)
+    base_url: "http://localhost:8001/v1"
+    # 模型路径 (ModelScope 下载后的本地路径)
+    model_path: "./models/Qwen3.5-4B"
+    # API 中的模型标识符
+    model: "Qwen3.5-4B"
+
+  # ── Ollama 配置 (gguf 量化推理, 降级备选) ──
+  ollama:
+    base_url: "http://localhost:11434"
+    model: "qwen2.5:14b"
+
+  # 生成参数
+  temperature: 0.3        # RAG 场景需要较低温度保证准确性
+  max_tokens: 512
+  top_p: 0.9
+  request_timeout: 30  # 优化3: 从600s改为30s，避免单个请求阻塞过久
+
+# -------------------- Embedding 向量化配置 --------------------
+embedding:
+  # 多语言语义向量模型（intfloat/multilingual-e5-small，384维）
+  # 支持中英文混合检索与跨语言检索，单索引无需双集合路由
+  model_name: "intfloat/multilingual-e5-small"
+  # 备用轻量模型（网络受限时）
+  fallback_model: "intfloat/multilingual-e5-small"
+  dim: 384
+  batch_size: 32
+  normalize: true
+  cache_dir: "./indexes/model_cache"
+
+# -------------------- 双语/多语言支持配置 --------------------
+bilingual:
+  enabled: true
+  # 文档语言检测：auto | heuristic | precise
+  detection_method: "auto"
+  # 最小中文 CJK 字符比例阈值（低于此值判定为非中文）
+  min_cjk_ratio: 0.05
+  # BM25 英文分词：auto（按文档语言自动切换）| zh_only | en_only
+  bm25_tokenizer: "auto"
+
+# -------------------- Reranker 精排配置 --------------------
+# bge-reranker-base (278M) 比 large (560M) 快 2 倍, CPU 模式推荐
+# CPU 不支持 fp16, use_fp16 必须为 false
+reranker:
+  model_name: "BAAI/bge-reranker-base"
+  use_fp16: false
+  top_k: 5                 # 精排后返回数量
+
+# -------------------- 向量数据库配置 --------------------
+# 支持三种模式：
+#   "chroma"       — ChromaDB 纯本地文件存储（无需 Docker）
+#   "milvus"       — Milvus 独立向量数据库
+#   "milvus_mysql" — Milvus(向量) + MySQL(元数据) 混合存储（默认）
+vector_db:
+  type: "milvus_mysql"      # "chroma" | "milvus" | "milvus_mysql"
+  # ChromaDB 配置（chroma 模式用）
+  chroma_path: "./indexes/chroma_db"
+  collection_name: "lychee_knowledge"
+  # MySQL 配置（milvus_mysql 模式用）
+  mysql:
+    host: "localhost"
+    port: 3306
+    user: "root"
+    password: "change-me"
+    database: "lycheeai_rag"
+  # Milvus 配置（milvus / milvus_mysql 模式用）
+  milvus:
+    uri: "http://localhost:19530"
+  # 索引参数
+  index_type: "IVF_FLAT"
+  metric_type: "COSINE"
+  nlist: 128
+  nprobe: 16
+
+# -------------------- 知识图谱配置 --------------------
+# 默认使用 NetworkX（轻量纯Python，无需Docker）
+# 如需切换到 Neo4j，将 type 改为 "neo4j" 并配置连接信息
+knowledge_graph:
+  type: "networkx"        # "networkx" | "neo4j"
+  # NetworkX 配置
+  graphml_path: "./indexes/lychee_kg.graphml"
+  # Neo4j 配置（可选）
+  neo4j_uri: "bolt://localhost:7687"
+  neo4j_user: "neo4j"
+  neo4j_password: "lycheeai123"
+
+# -------------------- BM25 索引配置 --------------------
+bm25:
+  index_path: "./indexes/bm25_index.pkl"
+  k1: 1.5
+  b: 0.75
+
+# -------------------- 分块参数配置 --------------------
+chunker:
+  chunk_size: 768           # 最大分块字符数
+  overlap: 96               # 块间重叠（约12.5%）
+  merge_threshold: 300       # 小于此字数的同一来源连续块自动合并
+
+# -------------------- PDF 解析配置 --------------------
+pdf:
+  ocr_enabled: true         # 扫描页自动 OCR（RapidOCR）
+  ocr_engine: "rapidocr"    # rapidocr（ONNX 推理，无需 GPU）
+  header_footer_threshold: 80  # 页眉/页脚 y 坐标阈值
+  min_text_length: 50         # 小于此字数视为扫描页
+
+# -------------------- 检索融合配置 --------------------
+# 实际检索路: vector + bm25 (两路)
+# kg 路: 37 节点小图谱 + 43 词词典, 命中率极低, 已移除
+# image 路: search() 未实现(返回空), 图像分析走外部 API 不经融合, 已移除
+retrieval:
+  # 各路检索的默认权重
+  weights:
+    vector: 1.0
+    kg: 1.2
+    bm25: 0.8
+    image: 1.0
+  # RRF 融合参数
+  rrf_k: 60
+  # 各路召回数量
+  vector_top_k: 20
+  bm25_top_k: 20
+  kg_top_k: 10
+  image_top_k: 5
+  # 单路检索超时（秒）
+  timeout: 5.0
+
+# -------------------- 外部图像识别 API 配置 --------------------
+# 13个荔枝图像识别/病虫害预测 API（已在接口文档中定义）
+external_api:
+  base_url: "http://89568cq9zc12.vicp.fun"
+  timeout: 60
+  retry_times: 2
+  # 默认城市编码（从化区）
+  default_city_code: "441284"
+
+# -------------------- 对话管理配置 --------------------
+conversation:
+  # 状态存储：memory（内存）| redis
+  storage: "memory"
+  redis_url: "redis://localhost:6379"
+  max_history_turns: 10
+  timeout_seconds: 1800   # 30分钟
+
+# -------------------- 物候期配置 --------------------
+phenology:
+  # 荔枝物候期与月份的对应关系
+  stage_month_mapping:
+    "秋梢萌动": [7, 8, 9]
+    "秋梢老熟": [9, 10, 11]
+    "花芽分化": [11, 12, 1]
+    "花穗生长期": [2, 3]
+    "开花期": [3, 4]
+    "幼果期": [4, 5]
+    "果实膨大期": [5, 6]
+    "成熟期": [6, 7]
+    "休眠期": [12, 1, 2]
+
+# -------------------- 数据路径配置 --------------------
+paths:
+  raw_data_dir: "./data/raw"
+  kg_data_path: "./data/kg_data/lychee_kg.json"
+  indexes_dir: "./indexes"
+  prompts_dir: "./config/prompts"
+  models_dir: "./models"    # 模型下载目录
+
+# -------------------- 日志配置 --------------------
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "./logs/lycheeai.log"

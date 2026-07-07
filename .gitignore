@@ -1,0 +1,39 @@
+# Environment
+.env
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+*.egg-info/
+dist/
+build/
+
+# Model cache (HuggingFace - download on demand)
+indexes/model_cache/
+**/.no_exist/
+
+# Virtual environment
+venv/
+.venv/
+env/
+
+# Node / Web
+web/node_modules/
+web/dist/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Data / large binaries
+*.onnx
+*.pt
+*.pth
+*.bin
+*.h5
