@@ -1,25 +1,25 @@
 import { createRouter, createWebHistory } from 'vue-router'
-import Layout from '@/views/Layout.vue'
-import Chat from '@/views/Chat.vue'
-import Detect from '@/views/Detect.vue'
-import Predict from '@/views/Predict.vue'
-import Knowledge from '@/views/Knowledge.vue'
 
 const routes = [
   {
     path: '/',
-    component: Layout,
+    component: () => import('@/views/Layout.vue'),
     redirect: '/chat',
     children: [
-      { path: 'chat', name: 'Chat', component: Chat },
-      { path: 'detect', name: 'Detect', component: Detect },
-      { path: 'predict', name: 'Predict', component: Predict },
-      { path: 'knowledge', name: 'Knowledge', component: Knowledge },
+      { path: 'chat', name: 'Chat', component: () => import('@/views/Chat.vue') },
+      { path: 'detect', name: 'Detect', component: () => import('@/views/Detect.vue') },
+      { path: 'predict', name: 'Predict', component: () => import('@/views/Predict.vue') },
+      { path: 'knowledge', name: 'Knowledge', component: () => import('@/views/Knowledge.vue') },
     ],
   },
   {
+    path: '/404',
+    name: 'NotFound',
+    component: () => import('@/views/NotFound.vue'),
+  },
+  {
     path: '/:pathMatch(.*)*',
-    redirect: '/chat',
+    redirect: '/404',
   },
 ]
 

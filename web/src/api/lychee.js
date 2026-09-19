@@ -10,6 +10,18 @@ export function queryChat(data) {
   return request.post('/query', data)
 }
 
+// 流式问答（SSE）
+export function queryChatStream(data, signal) {
+  return fetch('/api/query/stream', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(data),
+    signal,
+  })
+}
+
 export function queryChatWithImage(formData) {
   return request.post('/query/image', formData, {
     headers: { 'Content-Type': 'multipart/form-data' },

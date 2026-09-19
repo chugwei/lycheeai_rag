@@ -31,10 +31,7 @@
       </el-menu>
 
       <div class="border-t border-slate-200 p-4">
-        <div class="flex items-center gap-2 rounded-lg bg-slate-50 px-3 py-2 text-xs text-slate-500">
-          <el-icon><InfoFilled /></el-icon>
-          <span>服务状态：{{ serviceStatus }}</span>
-        </div>
+        <div v-html="serviceStatusHTML" class="rounded-lg bg-slate-50 px-3 py-2 text-xs leading-relaxed"></div>
       </div>
     </el-aside>
 
@@ -45,22 +42,41 @@
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { useRoute } from 'vue-router'
-import { ChatDotSquare, Camera, TrendCharts, FolderOpened, InfoFilled } from '@element-plus/icons-vue'
+import { ChatDotSquare, Camera, TrendCharts, FolderOpened } from '@element-plus/icons-vue'
 import { healthCheck } from '@/api/lychee'
 
 const route = useRoute()
-const serviceStatus = ref('检测中...')
+const healthData = ref({ llm_available: false, vector_db_status: '', bm25_loaded: false })
 
 const activeMenu = computed(() => route.path)
+
+const serviceStatusHTML = computed(() => {
+  const d = healthData.value
+  if (!d.llm_available && !d.vector_db_status) {
+    return '<span class="text-red-500">⚫ 后端离线</span>'
+  }
+
+  const llm = d.llm_available ? '🟢' : '🔴'
+  const vec = d.vector_db_status ? '🟢' : '🔴'
+  const bm25 = d.bm25_loaded ? '🟢' : '🔴'
+
+  return `${llm} LLM<br>${vec} 向量库<br>${bm25} BM25`
+})
+
+let healthInterval = null
 
 async function checkHealth() {
   try {
     const { data } = await healthCheck()
-    serviceStatus.value = data.llm_available ? 'LLM 可用' : 'LLM 不可用'
+    healthData.value = {
+      llm_available: data.llm_available || false,
+      vector_db_status: data.vector_db_status || '',
+      bm25_loaded: data.bm25_loaded || false,
+    }
   } catch {
-    serviceStatus.value = '后端离线'
+    healthData.value = { llm_available: false, vector_db_status: '', bm25_loaded: false }
   }
 }
 
@@ -70,7 +86,11 @@ function handleSelect() {
 
 onMounted(() => {
   checkHealth()
-  setInterval(checkHealth, 30000)
+  healthInterval = setInterval(checkHealth, 30000)
+})
+
+onUnmounted(() => {
+  if (healthInterval) clearInterval(healthInterval)
 })
 </script>
 
