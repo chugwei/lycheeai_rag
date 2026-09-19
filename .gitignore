@@ -37,3 +37,24 @@ Thumbs.db
 *.pth
 *.bin
 *.h5
+# === 2026-09-19 repo hygiene ===
+# Build artifacts (regenerable via scripts/build_index.py)
+indexes/bm25_index.pkl
+indexes/chunks_cache.json
+indexes/chroma_db/
+indexes/chunking_quality_report.json
+indexes/*.log
+
+# Data: PDF corpus excluded (size / copyright), md corpus tracked
+data/raw/*.pdf
+data/raw.zip
+
+# Logs & temp
+logs/
+*.log
+nul
+test_fig/
+
+# Tool state
+.zcode/
+.workbuddy/
