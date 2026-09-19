@@ -2,9 +2,14 @@
 配置加载器 - 统一管理全局配置
 """
 import os
+import re
 from pathlib import Path
 from typing import Any
 import yaml
+
+
+# ${VAR_NAME} 插值正则
+_VAR_PATTERN = re.compile(r'\$\{([^}]+)\}')
 
 
 def _load_env_file():
@@ -63,6 +68,9 @@ class Config:
         with open(config_path, "r", encoding="utf-8") as f:
             cls._config = yaml.safe_load(f)
 
+        # ${VAR_NAME} 环境变量插值（在 .env 加载之后、路径解析之前）
+        cls._interpolate_vars(cls._config)
+
         # 将相对路径转换为绝对路径（基于项目根目录）
         project_root = Path(__file__).parent.parent
         cls._resolve_paths(cls._config, project_root)
@@ -104,6 +112,30 @@ class Config:
                 config[key] = str((base_dir / value).resolve())
             elif isinstance(value, dict):
                 cls._resolve_paths(value, base_dir)
+
+    @classmethod
+    def _interpolate_vars(cls, obj: Any) -> Any:
+        """
+        递归遍历配置树，将字符串中的 ${VAR_NAME} 替换为对应环境变量值。
+
+        - 纯 "${VAR}"（整串就是占位符）→ 替换为环境变量原始类型（保持 str）
+        - 内嵌 "${VAR}" → 替换为字符串拼接
+        - 环境变量未定义 → 替换为空字符串并发出 warning（日志在调用方处理）
+        """
+        if isinstance(obj, dict):
+            for key in obj:
+                obj[key] = cls._interpolate_vars(obj[key])
+            return obj
+        elif isinstance(obj, list):
+            for i in range(len(obj)):
+                obj[i] = cls._interpolate_vars(obj[i])
+            return obj
+        elif isinstance(obj, str):
+            def _replacer(m):
+                var_name = m.group(1)
+                return os.environ.get(var_name, "")
+            return _VAR_PATTERN.sub(_replacer, obj)
+        return obj
 
     @classmethod
     def get(cls, key_path: str = None, default: Any = None) -> Any:

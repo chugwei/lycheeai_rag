@@ -6,8 +6,6 @@
 server:
   host: "0.0.0.0"
   api_port: 18888          # FastAPI 后端端口
-  frontend_port: 8502     # Gradio 前端端口
-  streamlit_port: 8501    # Streamlit 前端端口（经典版）
   debug: true
 
 # -------------------- LLM 大模型配置 --------------------
@@ -20,10 +18,13 @@ llm:
   external:
     # 外部 LLM API 地址 (OpenAI 兼容格式)
     base_url: "https://token.sensenova.cn/v1"
-    # API 密钥 (支持环境变量 ${VAR_NAME} 格式)
+    # API 密钥 (支持环境变量 ${VAR_NAME} 格式, 从 .env 注入)
     api_key: "${EXTERNAL_API_KEY}"
     # 模型名称
     model: "deepseek-v4-flash" #sensenova-6.7-flash-lite
+    # 额外请求体参数（按模型不同而不同），JSON 格式
+    # deepseek-v4-flash 支持: {"enable_thinking": false} 可关闭 CoT 推理加速
+    extra_body: '{"enable_thinking": false}'
 
   # ── OpenAI 兼容推理配置 (Transformers + FastAPI, 本地GPU备选) ──
   openai:
@@ -43,16 +44,16 @@ llm:
   temperature: 0.3        # RAG 场景需要较低温度保证准确性
   max_tokens: 512
   top_p: 0.9
-  request_timeout: 30  # 优化3: 从600s改为30s，避免单个请求阻塞过久
+  request_timeout: 60  # 流式输出需要更长超时
 
 # -------------------- Embedding 向量化配置 --------------------
 embedding:
-  # 多语言语义向量模型（intfloat/multilingual-e5-small，384维）
-  # 支持中英文混合检索与跨语言检索，单索引无需双集合路由
-  model_name: "intfloat/multilingual-e5-small"
+  # 中文语义向量模型（BAAI/bge-base-zh-v1.5，768维）
+  # 专为中文优化，比多语言模型在中文农业术语上精度更高
+  model_name: "BAAI/bge-base-zh-v1.5"
   # 备用轻量模型（网络受限时）
-  fallback_model: "intfloat/multilingual-e5-small"
-  dim: 384
+  fallback_model: "intfloat/multilingual-e5-small"  # 本地可用的中英双语灾备模型
+  dim: 768
   batch_size: 32
   normalize: true
   cache_dir: "./indexes/model_cache"
@@ -81,7 +82,7 @@ reranker:
 #   "milvus"       — Milvus 独立向量数据库
 #   "milvus_mysql" — Milvus(向量) + MySQL(元数据) 混合存储（默认）
 vector_db:
-  type: "milvus_mysql"      # "chroma" | "milvus" | "milvus_mysql"
+  type: "chroma"              # "chroma" | "milvus" | "milvus_mysql"
   # ChromaDB 配置（chroma 模式用）
   chroma_path: "./indexes/chroma_db"
   collection_name: "lychee_knowledge"
@@ -95,11 +96,6 @@ vector_db:
   # Milvus 配置（milvus / milvus_mysql 模式用）
   milvus:
     uri: "http://localhost:19530"
-  # 索引参数
-  index_type: "IVF_FLAT"
-  metric_type: "COSINE"
-  nlist: 128
-  nprobe: 16
 
 # -------------------- 知识图谱配置 --------------------
 # 默认使用 NetworkX（轻量纯Python，无需Docker）
@@ -123,7 +119,9 @@ bm25:
 chunker:
   chunk_size: 768           # 最大分块字符数
   overlap: 96               # 块间重叠（约12.5%）
-  merge_threshold: 300       # 小于此字数的同一来源连续块自动合并
+  merge_threshold: 300       # 小于此字数的连续块自动合并
+  merge_similarity_threshold: 0.65  # 语义相似度阈值（低于此值不合并）
+  version: "rule-v3"        # 写入构建清单，用于索引可追溯和兼容性检查
 
 # -------------------- PDF 解析配置 --------------------
 pdf:
@@ -133,23 +131,17 @@ pdf:
   min_text_length: 50         # 小于此字数视为扫描页
 
 # -------------------- 检索融合配置 --------------------
-# 实际检索路: vector + bm25 (两路)
-# kg 路: 37 节点小图谱 + 43 词词典, 命中率极低, 已移除
-# image 路: search() 未实现(返回空), 图像分析走外部 API 不经融合, 已移除
+# 实际检索路径: vector + bm25
 retrieval:
   # 各路检索的默认权重
   weights:
     vector: 1.0
-    kg: 1.2
     bm25: 0.8
-    image: 1.0
   # RRF 融合参数
   rrf_k: 60
   # 各路召回数量
   vector_top_k: 20
   bm25_top_k: 20
-  kg_top_k: 10
-  image_top_k: 5
   # 单路检索超时（秒）
   timeout: 5.0
 
@@ -166,7 +158,6 @@ external_api:
 conversation:
   # 状态存储：memory（内存）| redis
   storage: "memory"
-  redis_url: "redis://localhost:6379"
   max_history_turns: 10
   timeout_seconds: 1800   # 30分钟
 

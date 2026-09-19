@@ -47,14 +47,24 @@ def _load_template(name: str) -> str:
 
 
 def _build_context(docs: List[dict]) -> str:
-    """构建检索上下文"""
+    """构建检索上下文（表格数据用 <table> 标签包裹）"""
     parts = []
     for i, doc in enumerate(docs, 1):
         source = doc.get("source", "未知来源")
         text = doc.get("text", "")[:1000]
         paths = doc.get("retrieval_paths", [])
         path_str = "+".join(paths) if paths else "unknown"
-        parts.append(f"[{i}] 来源：{source} | 检索路径：{path_str}\n{text}")
+        meta = doc.get("metadata", {})
+
+        if meta.get("has_table"):
+            rows = meta.get("table_rows", meta.get("num_rows", 0))
+            cols = meta.get("table_cols", meta.get("num_cols", 0))
+            parts.append(
+                f"[{i}] 来源：{source} | 检索路径：{path_str} | [表格数据 {rows}行×{cols}列]\n"
+                f"<table>\n{text}\n</table>"
+            )
+        else:
+            parts.append(f"[{i}] 来源：{source} | 检索路径：{path_str}\n{text}")
     return "\n\n".join(parts)
 
 
@@ -201,14 +211,16 @@ def build_chat_messages(
     history: Optional[List[dict]] = None,
 ) -> List[dict]:
     """
-    构建 LangChain ChatPromptTemplate 所需的消息列表
+    构建 LangChain 消息列表
+
+    system.txt 的全部指令已通过 build_prompt() 嵌入 user 消息内容中，
+    因此不再单独设置 system role 消息，避免重复/冲突指令。
 
     Returns:
-        [{"role": "system", "content": "..."}, {"role": "user", "content": "..."}]
+        [{"role": "user", "content": "..."}]
     """
     prompt_text = build_prompt(query, docs, intent, phenology, image_analysis, history)
 
     return [
-        {"role": "system", "content": "你是一个专业的荔枝种植专家助手。请直接回答问题，不要输出任何思考过程、分析步骤或推理链。"},
         {"role": "user", "content": prompt_text},
     ]
