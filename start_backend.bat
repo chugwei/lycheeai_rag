@@ -1,35 +1,43 @@
 @echo off
-chcp 936 >nul
 setlocal EnableDelayedExpansion
 
-title LycheeAI LangChain - ºó¶Ë·þÎñ
+REM PowerShell æ£€æµ‹ï¼ˆ% åœ¨ PS ä¸­è¢«å½“ä½œ foreach åˆ«åï¼‰
+echo %PSModulePath% | findstr /i "PowerShell" >nul 2>&1
+if not errorlevel 1 (
+    echo [INFO] æ£€æµ‹åˆ° PowerShell çŽ¯å¢ƒï¼Œæ­£åœ¨è°ƒç”¨ start_backend.ps1...
+    powershell -ExecutionPolicy Bypass -File "%~dp0start_backend.ps1"
+    exit /b %errorlevel%
+)
 
-set "PROJECT=F:\Desktop\ÃæÊÔ\ÖÇ»Û¹ûÔ°ÏîÄ¿wb\lycheeai_langchain"
-set "PYTHON_EXE=F:\miniconda3\envs\lycheeai\python.exe"
+title LycheeAI RAG - Backend
+
+set "PROJECT=E:\github_project\lycheeai_rag"
+set "PYTHON_EXE=E:\miniconda3\envs\lycheeai\python.exe"
+set "API_PORT=18888"
 
 cd /d "%PROJECT%"
 
 echo.
 echo ============================================
-echo   LycheeAI LangChain °æ±¾ - ºó¶Ë·þÎñÆô¶¯
+echo   LycheeAI RAG - Backend Server
 echo ============================================
 echo.
-echo   ¶Ë¿Ú: 18889
-echo   µØÖ·: http://localhost:18889
-echo   API:  http://localhost:18889/docs
+echo   Port: %API_PORT%
+echo   URL:  http://localhost:%API_PORT%
+echo   API:  http://localhost:%API_PORT%/docs
 echo.
 
 if not exist "%PYTHON_EXE%" (
-    echo [´íÎó] Python ²»´æÔÚ: %PYTHON_EXE%
+    echo [ERROR] Python not found: %PYTHON_EXE%
     pause
     exit /b 1
 )
 
-echo ÕýÔÚÆô¶¯ºó¶Ë...
+echo Starting backend...
 "%PYTHON_EXE%" main.py
 
 if errorlevel 1 (
     echo.
-    echo [´íÎó] ºó¶Ë·þÎñÒì³£ÍË³ö (´íÎóÂë: !ERRORLEVEL!)
+    echo [ERROR] Backend exited with code: !ERRORLEVEL!
 )
 pause

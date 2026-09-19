@@ -1,98 +1,129 @@
 @echo off
-chcp 936 >nul
 setlocal EnableDelayedExpansion
 
 REM =============================================
-REM  LycheeAI LangChain - Ò»¼üÆô¶¯½Å±¾
-REM  Æô¶¯Á÷³Ì£º
-REM    1. ¼ì²é Docker ·þÎñ
-REM    2. Æô¶¯ºó¶Ë·þÎñ
-REM    3. µÈ´ýºó¶Ë¾ÍÐ÷
-REM    4. ´ò¿ªä¯ÀÀÆ÷
+REM  LycheeAI RAG - One-click startup
 REM =============================================
 
-title LycheeAI LangChain - Æô¶¯ÖÐ...
+REM æ£€æµ‹æ˜¯å¦åœ¨ PowerShell ä¸­è¿è¡Œï¼ˆ% åœ¨ PS ä¸­è¢«å½“ä½œ foreach åˆ«åï¼‰
+REM å¦‚æžœæ˜¯ï¼Œè‡ªåŠ¨è°ƒç”¨ start_all.ps1
+echo %PSModulePath% | findstr /i "PowerShell" >nul 2>&1
+if not errorlevel 1 (
+    echo [INFO] æ£€æµ‹åˆ° PowerShell çŽ¯å¢ƒï¼Œæ­£åœ¨è°ƒç”¨ start_all.ps1...
+    powershell -ExecutionPolicy Bypass -File "%~dp0start_all.ps1"
+    exit /b %errorlevel%
+)
+
+title LycheeAI RAG - Starting...
 
 echo.
 echo ============================================
-echo   LycheeAI LangChain °æ±¾ - Ò»¼üÆô¶¯
+echo   LycheeAI RAG System
 echo ============================================
 echo.
 
-REM ---- ÅäÖÃÂ·¾¶ ----
-set "PROJECT=F:\Desktop\ÃæÊÔ\ÖÇ»Û¹ûÔ°ÏîÄ¿wb\lycheeai_langchain"
-set "PYTHON_EXE=F:\miniconda3\envs\lycheeai\python.exe"
+set "PROJECT=E:\github_project\lycheeai_rag"
+set "PYTHON_EXE=E:\miniconda3\envs\lycheeai\python.exe"
+set "API_PORT=18888"
 
-REM ---- ¼ì²éÏîÄ¿Ä¿Â¼ ----
 if not exist "%PROJECT%" (
-    echo [´íÎó] ÏîÄ¿Ä¿Â¼²»´æÔÚ: %PROJECT%
+    echo [ERROR] Project directory not found: %PROJECT%
     pause
     exit /b 1
 )
 
-REM ---- ¼ì²é Python ----
 if not exist "%PYTHON_EXE%" (
-    echo [´íÎó] »·¾³ Python ²»´æÔÚ: %PYTHON_EXE%
+    echo [ERROR] Python interpreter not found: %PYTHON_EXE%
     pause
     exit /b 1
 )
 
 cd /d "%PROJECT%"
-echo [OK] ÏîÄ¿Ä¿Â¼: %CD%
-echo [OK] Python: %PYTHON_EXE%
-echo.
 
-REM ============================================
-REM  ²½Öè1£º¼ì²é Docker ·þÎñ
-REM ============================================
-echo [1/3] ¼ì²é Docker ·þÎñ...
-echo --------------------------------------------
-docker ps >nul 2>&1
+REM ---- Menu ----
+echo Choose an option:
+echo.
+echo   1. Start all services
+echo   2. Rebuild indexes (BM25 + vector)
+echo   3. Cancel
+echo.
+choice /c 123 /n /m "Enter [1/2/3]: "
+if errorlevel 3 exit /b 0
+if errorlevel 2 goto rebuild
+if errorlevel 1 goto start_services
+
+REM =============================================
+REM  Option 2: Rebuild indexes
+REM =============================================
+:rebuild
+echo.
+echo ============================================
+echo   Rebuilding indexes...
+echo ============================================
+echo.
+"%PYTHON_EXE%" scripts\build_index.py
 if errorlevel 1 (
-    echo [¾¯¸æ] Docker Î´ÔËÐÐ£¡ÇëÏÈÆô¶¯ Docker Desktop¡£
-    echo        Milvus + MySQL + etcd + MinIO ÐèÒª Docker¡£
-    echo.
-    choice /c YN /m "ÊÇ·ñÈÔÒª¼ÌÐøÆô¶¯£¿(²¿·Ö¹¦ÄÜ¿ÉÄÜ²»¿ÉÓÃ)"
-    if errorlevel 2 exit /b 1
+    echo [ERROR] Index rebuild failed
+    pause
+    exit /b 1
+)
+echo.
+echo [OK] Index rebuilt successfully
+pause
+exit /b 0
+
+REM =============================================
+REM  Option 1: Start all services
+REM =============================================
+:start_services
+echo.
+echo [1/3] Docker containers...
+echo --------------------------------------------
+
+REM è¯»å– VECTOR_DB_TYPEï¼Œè‹¥ä¸º chroma åˆ™è·³è¿‡ Docker
+set "VECTOR_DB_TYPE=chroma"
+if exist "%PROJECT%\.env" (
+    for /f "tokens=2 delims==" %%a in ('findstr /b "VECTOR_DB_TYPE" "%PROJECT%\.env" 2^>nul') do set "VECTOR_DB_TYPE=%%a"
+)
+
+if /i "%VECTOR_DB_TYPE%"=="chroma" (
+    echo [INFO] ChromaDB æ¨¡å¼ - æ— éœ€ Docker å®¹å™¨
 ) else (
-    echo [OK] Docker ÒÑÔËÐÐ
-    REM ¼ì²é¹Ø¼üÈÝÆ÷
-    docker ps --format "{{.Names}}" 2>nul | find "lycheeai-mysql" >nul
+    docker ps >nul 2>&1
     if errorlevel 1 (
-        echo [ÌáÊ¾] MySQL ÈÝÆ÷Î´ÔËÐÐ£¬ÕýÔÚÆô¶¯...
-        docker-compose up -d
-        timeout /t 5 /nobreak >nul
+        echo [INFO] Docker not available - using local ChromaDB
+    ) else (
+        echo [OK] Docker running, checking containers...
+        docker ps --format "{{.Names}}" 2>nul | find "lycheeai-mysql" >nul
+        if errorlevel 1 (
+            echo [INFO] Starting MySQL...
+            docker-compose up -d mysql
+            timeout /t 5 /nobreak >nul
+        )
+        docker ps --format "{{.Names}}" 2>nul | find "lycheeai-milvus" >nul
+        if errorlevel 1 (
+            echo [INFO] Starting Milvus...
+            docker-compose up -d milvus etcd minio
+            timeout /t 5 /nobreak >nul
+        )
+        echo [OK] Docker containers ready
     )
-    docker ps --format "{{.Names}}" 2>nul | find "lycheeai-milvus" >nul
-    if errorlevel 1 (
-        echo [ÌáÊ¾] Milvus ÈÝÆ÷Î´ÔËÐÐ£¬ÕýÔÚÆô¶¯...
-        docker-compose up -d
-        timeout /t 5 /nobreak >nul
-    )
-    echo [OK] Docker ·þÎñ¾ÍÐ÷
 )
 echo.
 
-REM ============================================
-REM  ²½Öè2£ºÇåÀí²ÐÁô½ø³Ì
-REM ============================================
-echo [2/3] ÇåÀí²ÐÁô½ø³Ì...
+echo [2/3] Cleaning old processes...
 echo --------------------------------------------
-taskkill /f /fi "WINDOWTITLE eq LycheeAI LangChain*" 2>nul
+taskkill /f /fi "WINDOWTITLE eq LycheeAI RAG - Backend" 2>nul
 timeout /t 2 /nobreak >nul
-echo [OK] ÇåÀíÍê³É
+echo [OK] Cleanup done
 echo.
 
-REM ============================================
-REM  ²½Öè3£ºÆô¶¯ºó¶Ë·þÎñ
-REM ============================================
-echo [3/3] Æô¶¯ºó¶Ë·þÎñ£¨¶Ë¿Ú18889£©...
+echo [3/3] Starting backend (port %API_PORT%)...
 echo --------------------------------------------
 
-start "LycheeAI LangChain - ºó¶Ë·þÎñ" "%PYTHON_EXE%" main.py
+start /min "LycheeAI RAG - Backend" "%PYTHON_EXE%" main.py
 
-REM µÈ´ýºó¶Ë¾ÍÐ÷
-set "API_URL=http://localhost:18889/api/health"
+set "API_URL=http://localhost:%API_PORT%/api/health"
 set /a wait=0
 :wait_api
 timeout /t 3 /nobreak >nul
@@ -100,38 +131,34 @@ set /a wait+=3
 
 "%PYTHON_EXE%" -c "import httpx; r=httpx.get('%API_URL%',timeout=5); exit(0 if r.status_code==200 else 1)" 2>nul
 if not errorlevel 1 (
-    echo [OK] ºó¶Ë·þÎñÒÑ¾ÍÐ÷£¨ºÄÊ± %wait% Ãë£©
+    echo [OK] Backend ready (%wait%s)
     goto api_ready
 )
 
-if %wait% GEQ 120 (
-    echo [´íÎó] ºó¶Ë·þÎñÆô¶¯³¬Ê±£¨120Ãë£©
-    echo        Çë¼ì²éÊÇ·ñÓÐ¶Ë¿Ú³åÍ»»ò Docker ·þÎñÎ´Æô¶¯¡£
+if %wait% GEQ 180 (
+    echo [ERROR] Backend startup timeout (180s)
+    echo         The first startup may take longer due to model downloads.
     pause
     exit /b 1
 )
-echo   µÈ´ýÖÐ... (%wait%s)
+echo   Waiting... (%wait%s)
 goto wait_api
 :api_ready
 
 echo.
 echo ============================================
-echo   ËùÓÐ·þÎñÒÑÆô¶¯Íê³É£¡
+echo   All services started!
 echo ============================================
 echo.
-echo   ºó¶ËµØÖ·:     http://localhost:18889
-echo   APIÎÄµµ:      http://localhost:18889/docs
-echo   Ç°¶ËµØÖ·:     http://localhost:18889
+echo   Backend:  http://localhost:%API_PORT%
+echo   API docs: http://localhost:%API_PORT%/docs
 echo.
-echo   ÌáÊ¾£ºÒ»¸öºÚÉ«ÃüÁîÐÐ´°¿ÚÒÑ´ò¿ª£¬ÇëÎð¹Ø±Õ£¡
-echo   Í£Ö¹·þÎñ£ºË«»÷ stop_all.bat
+echo   Stop:  double-click stop_all.bat
 echo.
-echo   ÕýÔÚ´ò¿ªä¯ÀÀÆ÷...
 
 timeout /t 2 /nobreak >nul
-start "" "http://localhost:18889"
+start "" "http://localhost:%API_PORT%"
 
-echo.
-echo °´ÈÎÒâ¼üÍË³ö´Ë´°¿Ú£¨·þÎñ´°¿ÚÇë±£Áô£©...
+echo Press any key to close this window (backend stays open)...
 pause > nul
 endlocal

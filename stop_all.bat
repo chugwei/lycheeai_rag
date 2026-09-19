@@ -1,32 +1,35 @@
 @echo off
-chcp 936 >nul
-title LycheeAI LangChain - Í£Ö¹·þÎñ
+title LycheeAI RAG - Stop Services
+
+REM PowerShell æ£€æµ‹
+echo %PSModulePath% | findstr /i "PowerShell" >nul 2>&1
+if not errorlevel 1 (
+    echo [INFO] æ£€æµ‹åˆ° PowerShell çŽ¯å¢ƒï¼Œæ­£åœ¨è°ƒç”¨ stop_all.ps1...
+    powershell -ExecutionPolicy Bypass -File "%~dp0stop_all.ps1"
+    exit /b %errorlevel%
+)
 
 echo ========================================
-echo   LycheeAI LangChain - Í£Ö¹ËùÓÐ·þÎñ
+echo   LycheeAI RAG - Stop All Services
 echo ========================================
 echo.
 
-echo ÕýÔÚ²éÕÒ²¢Í£Ö¹ Python ½ø³Ì...
-echo.
+echo [1/2] Stopping backend (LycheeAI RAG)...
+taskkill /f /fi "WINDOWTITLE eq LycheeAI RAG*" 2>nul
+echo   - Done
 
-echo [1/2] Í£Ö¹ºó¶Ë·þÎñ (lycheeai_langchain.main)...
-taskkill /f /fi "WINDOWTITLE eq LycheeAI LangChain*" 2>nul
-taskkill /f /fi "IMAGENAME eq python.exe" /fi "CMD eq *lycheeai_langchain*" 2>nul
-echo   - ÒÑ·¢ËÍÍ£Ö¹ÐÅºÅ
-
-echo [2/2] Í£Ö¹ÆäËû Python ½ø³Ì...
+echo [2/2] Stopping main.py processes...
 taskkill /f /fi "IMAGENAME eq python.exe" /fi "CMD eq *main*" 2>nul
-echo   - ÒÑ·¢ËÍÍ£Ö¹ÐÅºÅ
+echo   - Done
 
 echo.
-echo ÕýÔÚµÈ´ý½ø³ÌÍË³ö...
+echo Waiting for processes to exit...
 timeout /t 2 /nobreak >nul
 
 echo.
 echo ========================================
-echo   ËùÓÐ·þÎñÒÑÍ£Ö¹
-echo   ¶Ë¿Ú 18889 ÒÑÊÍ·Å
+echo   All services stopped
+echo   Port 18888 released
 echo ========================================
 echo.
 pause
