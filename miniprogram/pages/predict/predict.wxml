@@ -1,0 +1,41 @@
+<!-- pages/predict/predict.wxml -->
+<view class="predict-container">
+  <view class="tip">基于外部农情模型，预测病虫害发生期与产量趋势。部分预测需提供城市 / 地区编码。</view>
+
+  <view class="field">
+    <text class="label">预测类型</text>
+    <picker mode="selector" range="{{types}}" range-key="name" value="{{typeIndex}}" bindchange="onTypeChange">
+      <view class="picker">{{typeName}} ▾</view>
+    </picker>
+    <text class="hint">{{types[typeIndex].desc}}</text>
+  </view>
+
+  <view wx:if="{{need === 'city'}}" class="field">
+    <text class="label">城市编码</text>
+    <input class="input" value="{{cityCode}}" bindinput="onCityInput" placeholder="如 440100" />
+  </view>
+
+  <view wx:if="{{need === 'location' || need === 'location_date'}}" class="field">
+    <text class="label">地区编码（9 位）</text>
+    <input class="input" value="{{locationCode}}" bindinput="onLocationInput" placeholder="如 440113000" />
+  </view>
+
+  <view wx:if="{{need === 'location_date'}}" class="field">
+    <text class="label">日期</text>
+    <input class="input" value="{{dateStr}}" bindinput="onDateInput" placeholder="如 2025-06-15" />
+  </view>
+
+  <button class="submit-btn" bindtap="onSubmit" loading="{{loading}}" disabled="{{loading}}">
+    {{loading ? '预测中…' : '开始预测'}}
+  </button>
+
+  <view wx:if="{{result}}" class="result card">
+    <view class="result-head">
+      <text class="card-title">预测结果</text>
+      <text class="copy" bindtap="copyResult">复制</text>
+    </view>
+    <scroll-view scroll-y class="result-box">
+      <text class="result-text" user-select>{{result}}</text>
+    </scroll-view>
+  </view>
+</view>

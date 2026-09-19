@@ -1,0 +1,79 @@
+<!-- pages/diagnose/diagnose.wxml -->
+<view class="diag-container">
+  <view class="tip">上传荔枝园照片，荔知君将结合图像识别与知识库，给出诊断结论与管理建议。</view>
+
+  <!-- 识别类型 -->
+  <view class="field">
+    <text class="label">识别类型</text>
+    <picker
+      mode="selector"
+      range="{{apiTypes}}"
+      range-key="name"
+      value="{{apiIndex}}"
+      bindchange="onApiChange"
+    >
+      <view class="picker">{{apiTypeName}} ▾</view>
+    </picker>
+  </view>
+
+  <!-- 照片 -->
+  <view class="field">
+    <text class="label">果园照片</text>
+    <view class="img-area" bindtap="chooseImage">
+      <image
+        wx:if="{{imagePath}}"
+        class="preview"
+        src="{{imagePath}}"
+        mode="aspectFill"
+        catchtap="previewImage"
+      ></image>
+      <view wx:else class="img-placeholder">
+        <text class="plus">＋</text>
+        <text class="ph-text">点击选择 / 拍摄照片</text>
+      </view>
+    </view>
+    <text wx:if="{{imagePath}}" class="remove" bindtap="removeImage">重新选择</text>
+  </view>
+
+  <!-- 补充说明 -->
+  <view class="field">
+    <text class="label">补充说明（选填）</text>
+    <input
+      class="q-input"
+      value="{{question}}"
+      bindinput="onQuestionInput"
+      placeholder="例如：这棵树叶子有点发黄，落果严重…"
+    />
+  </view>
+
+  <button class="submit-btn" bindtap="submit" loading="{{loading}}" disabled="{{loading}}">
+    {{loading ? '识别中…' : '开始识别'}}
+  </button>
+
+  <!-- 结果 -->
+  <view wx:if="{{result}}" class="result">
+    <view class="card">
+      <view class="card-title">🔍 图像识别分析</view>
+      <text class="card-text" user-select>{{result.imageAnalysis}}</text>
+    </view>
+
+    <view class="card">
+      <view class="card-title">💡 综合回答</view>
+      <text class="card-text" user-select>{{result.answer}}</text>
+      <view wx:if="{{result.confidenceText || result.phenologyText}}" class="meta">
+        <text wx:if="{{result.confidenceText}}" class="tag">置信度：{{result.confidenceText}}</text>
+        <text wx:if="{{result.phenologyText}}" class="tag">🌱 {{result.phenologyText}}</text>
+      </view>
+    </view>
+
+    <view wx:if="{{result.sources.length}}" class="card">
+      <view class="card-title">📚 引用来源（{{result.sources.length}}）</view>
+      <source-card
+        wx:for="{{result.sources}}"
+        wx:for-item="src"
+        wx:key="ref_id"
+        src="{{src}}"
+      ></source-card>
+    </view>
+  </view>
+</view>

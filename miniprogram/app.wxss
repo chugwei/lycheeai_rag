@@ -1,0 +1,57 @@
+/* app.wxss - 全局样式与荔枝绿主题变量 */
+page {
+  /* 主题色板 */
+  --primary: #2e7d32;
+  --primary-dark: #1b5e20;
+  --primary-light: #e8f5e9;
+  --bg: #f5f7f5;
+  --text: #1f2d27;
+  --text-weak: #8a948f;
+  --card: #ffffff;
+  --border: #e6ebe8;
+  --warn: #ef6c00;
+
+  background-color: var(--bg);
+  color: var(--text);
+  font-family: -apple-system, BlinkMacSystemFont, "PingFang SC", "Helvetica Neue", Helvetica, sans-serif;
+  font-size: 28rpx;
+  line-height: 1.6;
+}
+
+view, text, input, button, scroll-view, picker, image {
+  box-sizing: border-box;
+}
+
+/* 通用卡片 */
+.card {
+  background: var(--card);
+  border-radius: 20rpx;
+  padding: 28rpx;
+  margin-bottom: 24rpx;
+  box-shadow: 0 4rpx 16rpx rgba(0, 0, 0, 0.04);
+}
+
+.card-title {
+  font-size: 30rpx;
+  font-weight: 600;
+  color: var(--primary-dark);
+  margin-bottom: 16rpx;
+}
+
+.card-text {
+  font-size: 28rpx;
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+/* 标签 */
+.tag {
+  display: inline-block;
+  font-size: 22rpx;
+  color: var(--primary);
+  background: var(--primary-light);
+  border-radius: 8rpx;
+  padding: 4rpx 14rpx;
+  margin: 8rpx 12rpx 0 0;
+}

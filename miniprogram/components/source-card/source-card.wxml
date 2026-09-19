@@ -1,0 +1,17 @@
+<!-- components/source-card/source-card.wxml -->
+<view class="src-card">
+  <view class="src-head">
+    <text class="src-badge">[{{src.ref_id}}]</text>
+    <text class="src-name">{{src.source}}</text>
+    <text class="src-score">相关度 {{src.rerank_score}}</text>
+  </view>
+  <text class="src-preview" user-select>{{src.text_preview}}</text>
+  <view wx:if="{{src.retrieval_paths.length}}" class="src-paths">
+    <text
+      wx:for="{{src.retrieval_paths}}"
+      wx:for-item="p"
+      wx:key="*this"
+      class="path-tag"
+    >{{p}}</text>
+  </view>
+</view>

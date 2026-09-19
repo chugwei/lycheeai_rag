@@ -1,0 +1,6 @@
+{
+  "usingComponents": {
+    "source-card": "/components/source-card/source-card"
+  },
+  "navigationBarTitleText": "果园识病"
+}

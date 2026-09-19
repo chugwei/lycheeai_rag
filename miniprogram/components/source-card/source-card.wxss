@@ -1,0 +1,58 @@
+/* components/source-card/source-card.wxss */
+.src-card {
+  background: #fafdfa;
+  border: 1rpx solid var(--border, #e6ebe8);
+  border-left: 6rpx solid var(--primary, #2e7d32);
+  border-radius: 12rpx;
+  padding: 18rpx 20rpx;
+  margin-top: 14rpx;
+}
+
+.src-head {
+  display: flex;
+  align-items: center;
+  font-size: 24rpx;
+  margin-bottom: 10rpx;
+}
+
+.src-badge {
+  color: var(--primary, #2e7d32);
+  font-weight: 600;
+  margin-right: 10rpx;
+}
+
+.src-name {
+  flex: 1;
+  color: #44524c;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.src-score {
+  color: var(--text-weak, #8a948f);
+  font-size: 22rpx;
+  margin-left: 12rpx;
+}
+
+.src-preview {
+  display: block;
+  font-size: 26rpx;
+  color: #33433c;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.src-paths {
+  margin-top: 12rpx;
+}
+
+.path-tag {
+  display: inline-block;
+  font-size: 20rpx;
+  color: var(--primary, #2e7d32);
+  background: var(--primary-light, #e8f5e9);
+  border-radius: 6rpx;
+  padding: 2rpx 10rpx;
+  margin: 0 8rpx 8rpx 0;
+}

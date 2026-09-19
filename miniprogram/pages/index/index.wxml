@@ -1,0 +1,76 @@
+<!-- pages/index/index.wxml -->
+<view class="chat-container">
+  <scroll-view
+    class="msg-list"
+    scroll-y
+    scroll-top="{{scrollTop}}"
+    scroll-with-animation
+  >
+    <view
+      wx:for="{{messages}}"
+      wx:key="index"
+      class="msg-row {{item.role === 'user' ? 'row-user' : 'row-bot'}}"
+    >
+      <view class="avatar {{item.role === 'user' ? 'avatar-user' : 'avatar-bot'}}">
+        {{item.role === 'user' ? '我' : '🍒'}}
+      </view>
+
+      <view class="bubble {{item.role === 'user' ? 'bubble-user' : 'bubble-bot'}}">
+        <!-- 加载态 -->
+        <view wx:if="{{item.loading}}" class="loading">
+          <view class="dot"></view>
+          <view class="dot"></view>
+          <view class="dot"></view>
+          <text class="loading-text">荔知君正在思考…</text>
+        </view>
+
+        <block wx:else>
+          <text class="answer-text" user-select>{{item.content}}</text>
+
+          <view wx:if="{{item.phenologyText}}" class="phenology">
+            🌱 当前物候期：{{item.phenologyText}}
+          </view>
+
+          <view wx:if="{{item.intent || item.confidenceText}}" class="meta">
+            <text wx:if="{{item.intent}}" class="tag">意图：{{item.intent}}</text>
+            <text wx:if="{{item.confidenceText}}" class="tag">置信度：{{item.confidenceText}}</text>
+          </view>
+
+          <view wx:if="{{item.sources.length}}" class="sources">
+            <view class="sources-title">📚 引用来源（{{item.sources.length}}）</view>
+            <source-card
+              wx:for="{{item.sources}}"
+              wx:for-item="src"
+              wx:key="ref_id"
+              src="{{src}}"
+            ></source-card>
+          </view>
+        </block>
+      </view>
+    </view>
+  </scroll-view>
+
+  <!-- 常见问题建议（仅首屏显示） -->
+  <view wx:if="{{showSuggestions}}" class="suggestions">
+    <view
+      wx:for="{{suggestions}}"
+      wx:key="index"
+      class="suggestion"
+      data-text="{{item}}"
+      bindtap="onSuggestionTap"
+    >{{item}}</view>
+  </view>
+
+  <!-- 底部输入栏 -->
+  <view class="input-bar">
+    <input
+      class="input"
+      value="{{inputValue}}"
+      bindinput="onInput"
+      placeholder="输入荔枝种植问题…"
+      confirm-type="send"
+      bindconfirm="onSendTap"
+    />
+    <button class="send-btn" bindtap="onSendTap" disabled="{{loading}}">发送</button>
+  </view>
+</view>

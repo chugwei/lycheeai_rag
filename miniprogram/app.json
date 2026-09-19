@@ -1,0 +1,47 @@
+{
+  "pages": [
+    "pages/index/index",
+    "pages/diagnose/diagnose",
+    "pages/predict/predict",
+    "pages/profile/profile"
+  ],
+  "window": {
+    "navigationBarBackgroundColor": "#2e7d32",
+    "navigationBarTitleText": "荔知君",
+    "navigationBarTextStyle": "white",
+    "backgroundColor": "#f5f7f5",
+    "backgroundTextStyle": "dark"
+  },
+  "tabBar": {
+    "color": "#8a948f",
+    "selectedColor": "#2e7d32",
+    "backgroundColor": "#ffffff",
+    "borderStyle": "black",
+    "list": [
+      {
+        "pagePath": "pages/index/index",
+        "text": "智能问答"
+      },
+      {
+        "pagePath": "pages/diagnose/diagnose",
+        "text": "果园识病"
+      },
+      {
+        "pagePath": "pages/predict/predict",
+        "text": "风险预警"
+      },
+      {
+        "pagePath": "pages/profile/profile",
+        "text": "我的"
+      }
+    ]
+  },
+  "networkTimeout": {
+    "request": 60000,
+    "uploadFile": 60000,
+    "downloadFile": 60000
+  },
+  "sitemapLocation": "sitemap.json",
+  "style": "v2",
+  "lazyCodeLoading": "requiredComponents"
+}

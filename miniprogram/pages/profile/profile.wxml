@@ -1,0 +1,39 @@
+<!-- pages/profile/profile.wxml -->
+<view class="profile-container">
+  <view class="header">
+    <image wx:if="{{avatarUrl}}" class="avatar" src="{{avatarUrl}}" mode="aspectFill"></image>
+    <view wx:else class="avatar avatar-default">🍒</view>
+    <view class="info">
+      <block wx:if="{{loggedIn}}">
+        <text class="nickname">{{nickname || '微信用户'}}</text>
+        <text class="openid">openid: {{openidMasked}}</text>
+      </block>
+      <text wx:else class="nickname">未登录</text>
+    </view>
+  </view>
+
+  <view class="card">
+    <view class="card-title">账号</view>
+    <block wx:if="{{loggedIn}}">
+      <button class="avatar-btn" open-type="chooseAvatar" bind:chooseavatar="onChooseAvatar">选择头像</button>
+      <input
+        class="nickname-input"
+        type="nickname"
+        placeholder="点击设置昵称"
+        value="{{nickname}}"
+        bind:nickname="onNickname"
+        bindblur="onNicknameInput"
+      />
+      <button class="logout-btn" bindtap="onLogout">退出登录</button>
+    </block>
+    <button
+      wx:else
+      class="login-btn"
+      bindtap="onLogin"
+      loading="{{loginLoading}}"
+      disabled="{{loginLoading}}"
+    >{{loginLoading ? '登录中…' : '微信一键登录'}}</button>
+  </view>
+
+  <view class="tip">登录后可在多端同步会话与收藏，未来还将支持个性化农事提醒。</view>
+</view>
