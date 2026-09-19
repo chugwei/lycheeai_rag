@@ -10,6 +10,8 @@ import base64
 import hashlib
 import hmac
 import time
+import os
+import urllib.request
 from pathlib import Path
 from typing import Optional
 
@@ -29,7 +31,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from fastapi import FastAPI, UploadFile, File, Form, Query, HTTPException, Header, Depends
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, StreamingResponse
 from loguru import logger
 
 from config.settings import Config
@@ -43,11 +45,41 @@ from external_apis.api_client import LycheeAPIClient
 # 加载配置
 Config.load()
 
+# 初始化日志（必须在任何 logger 输出之前）
+from utils.logging_setup import setup_logging
+setup_logging()
+
+# ==================== 生命周期管理 ====================
+from contextlib import asynccontextmanager
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """应用生命周期：启动时预加载 RAG 管线（模型加载耗时 ~90s）"""
+    logger.info("正在预加载 RAG 管线（首次加载可能需要 1-2 分钟）...")
+    loop = asyncio.get_event_loop()
+
+    def _preload():
+        from rag_chain import get_pipeline
+        get_pipeline()
+        logger.info("RAG 管线预加载完成")
+
+    try:
+        await loop.run_in_executor(None, _preload)
+    except Exception as e:
+        logger.warning(f"RAG 管线预加载失败（服务仍可启动，首次请求会触发加载）: {e}")
+
+    yield
+    # 关闭清理
+    logger.info("服务关闭")
+
+
 # 创建 FastAPI 应用
 app = FastAPI(
     title="LycheeAI 荔知君 RAG系统 (LangChain版)",
     description="基于 LangChain 框架的荔枝种植垂直领域 RAG 问答系统 API",
     version="2.0.0",
+    lifespan=lifespan,
     docs_url="/docs",
     redoc_url="/redoc",
 )
@@ -167,6 +199,46 @@ def require_admin(authorization: str = Header(None)):
     return True
 
 
+# ==================== 微信用户登录 ====================
+
+WX_APPID = os.environ.get("WX_APPID") or Config.get("wx.appid")
+WX_SECRET = os.environ.get("WX_SECRET") or Config.get("wx.secret")
+USER_TOKEN_SECRET = os.environ.get("USER_TOKEN_SECRET") or "lycheeai-user-secret-2026"
+USER_TOKEN_EXPIRE = 30 * 86400  # 用户令牌有效期 30 天
+
+
+def _make_user_token(openid: str) -> str:
+    payload = json.dumps({"openid": openid, "t": int(time.time()) + USER_TOKEN_EXPIRE})
+    sig = hmac.new(USER_TOKEN_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()[:16]
+    return base64.urlsafe_b64encode(f"{payload}.{sig}".encode()).decode()
+
+
+def _verify_user_token(token: str):
+    try:
+        decoded = base64.urlsafe_b64decode(token.encode()).decode()
+        payload, sig = decoded.rsplit(".", 1)
+        expected = hmac.new(USER_TOKEN_SECRET.encode(), payload.encode(), hashlib.sha256).hexdigest()[:16]
+        if sig != expected:
+            return None
+        data = json.loads(payload)
+        if data.get("t", 0) < time.time():
+            return None
+        return data.get("openid")
+    except Exception:
+        return None
+
+
+def require_user(authorization: str = Header(None)):
+    """依赖注入：校验用户令牌，返回 openid"""
+    if not authorization:
+        raise HTTPException(401, "需要登录")
+    token = authorization.replace("Bearer ", "")
+    openid = _verify_user_token(token)
+    if not openid:
+        raise HTTPException(401, "令牌无效或已过期")
+    return openid
+
+
 # ==================== API 端点 ====================
 
 @app.post("/api/auth/login", tags=["系统"])
@@ -175,6 +247,49 @@ async def admin_login(data: dict):
     if data.get("username") == ADMIN_USER and data.get("password") == ADMIN_PASS:
         return {"token": _make_token(), "user": ADMIN_USER}
     raise HTTPException(401, "用户名或密码错误")
+
+
+@app.post("/api/auth/wechat-login", tags=["系统"])
+async def wechat_login(data: dict):
+    """微信小程序登录：用 wx.login 拿到的 code 换取 openid，返回用户令牌"""
+    code = data.get("code")
+    if not code:
+        raise HTTPException(400, "缺少 code")
+    if not WX_APPID or not WX_SECRET:
+        raise HTTPException(500, "服务端未配置 WX_APPID / WX_SECRET（请在 .env 中设置）")
+
+    def _call_wx_code2session():
+        url = (
+            "https://api.weixin.qq.com/sns/jscode2session"
+            f"?appid={WX_APPID}&secret={WX_SECRET}"
+            f"&js_code={code}&grant_type=authorization_code"
+        )
+        with urllib.request.urlopen(url, timeout=8) as resp:
+            return json.loads(resp.read().decode())
+
+    try:
+        result = await asyncio.to_thread(_call_wx_code2session)
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(502, f"微信登录接口调用失败: {e}")
+
+    if result.get("errcode"):
+        raise HTTPException(400, f"微信登录失败: {result.get('errmsg')}")
+    openid = result.get("openid")
+    if not openid:
+        raise HTTPException(400, "未获取到 openid")
+    return {
+        "token": _make_user_token(openid),
+        "openid": openid,
+        "unionid": result.get("unionid"),
+    }
+
+
+@app.get("/api/auth/me", tags=["系统"])
+async def auth_me(openid: str = Depends(require_user)):
+    """获取当前登录用户信息（需鉴权，演示用）"""
+    return {"openid": openid}
 
 
 @app.get("/api/health", response_model=HealthResponse, tags=["系统"])
@@ -240,10 +355,41 @@ async def query(request: QueryRequest):
             retrieval_paths_used=result.retrieval_paths_used,
             phenology=result.phenology,
             latency=result.latency,
+            stage_timings=result.stage_timings,
         )
     except Exception as e:
         logger.error(f"问答失败: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
+
+@app.post("/api/query/stream", tags=["RAG问答"])
+async def query_stream(request: QueryRequest):
+    """流式 RAG 问答（SSE）"""
+    async def event_generator():
+        try:
+            from rag_chain import get_pipeline
+            pipeline = get_pipeline()
+
+            async for event in pipeline.run_stream(
+                query=request.query,
+                conversation_id=request.conversation_id,
+                phenology_date=request.phenology_date,
+                use_query_expansion=request.use_query_expansion,
+            ):
+                yield f"data: {json.dumps(event, ensure_ascii=False)}\n\n"
+        except Exception as e:
+            logger.error(f"流式问答失败: {e}")
+            yield f"data: {json.dumps({'type': 'error', 'data': {'message': str(e)}}, ensure_ascii=False)}\n\n"
+
+    return StreamingResponse(
+        event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 @app.post("/api/query/image", response_model=QueryResponse, tags=["RAG问答"])
@@ -279,6 +425,7 @@ async def query_with_image(
             phenology=result.phenology,
             image_analysis=result.image_analysis,
             latency=result.latency,
+            stage_timings=result.stage_timings,
         )
     except Exception as e:
         logger.error(f"图文问答失败: {e}")
@@ -322,8 +469,7 @@ async def analyze_image(
             llm = create_llm_for_analysis()
             prompt = _build_api_analysis_prompt(api_type, result)
             messages = [
-                {"role": "system", "content": "你是一个荔枝种植专家。请直接回答问题，不要输出任何思考过程、分析步骤或推理链。"},
-                {"role": "user", "content": prompt},
+                {"role": "user", "content": f"你是一个荔枝种植专家。\n\n{prompt}"},
             ]
             response = llm.invoke(messages)
             result["llm_analysis"] = response.content.strip()
@@ -391,6 +537,7 @@ async def get_llm_config():
         model=Config.get("llm.external.model", "deepseek-v4-flash"),
         api_key_configured=bool(Config.get("llm.external.api_key")),
         available_backends=["external"],
+        extra_body=Config.get("llm.external.extra_body", ""),
     )
 
 
@@ -403,6 +550,8 @@ async def set_llm_config(request: LLMConfigRequest):
         Config.set("llm.external.base_url", request.base_url)
     if request.model:
         Config.set("llm.external.model", request.model)
+    if request.extra_body is not None:
+        Config.set("llm.external.extra_body", request.extra_body)
 
     # 重建管线
     import rag_chain as rc
@@ -415,7 +564,88 @@ async def set_llm_config(request: LLMConfigRequest):
         model=Config.get("llm.external.model", "deepseek-v4-flash"),
         api_key_configured=bool(Config.get("llm.external.api_key")),
         available_backends=["external"],
+        extra_body=Config.get("llm.external.extra_body", ""),
     )
+
+
+# ==================== 分块数据 API ====================
+
+# 分块缓存（内存缓存，避免每次请求都读 6.8MB JSON）
+_chunks_cache_data = None
+_chunks_cache_mtime = 0
+_chunks_cache_by_id = {}
+
+
+def _get_chunks_cache():
+    """获取分块缓存（惰性加载 + 文件变更检测）"""
+    global _chunks_cache_data, _chunks_cache_mtime, _chunks_cache_by_id
+    cache_path = Path(Config.get("paths.indexes_dir", "./indexes")) / "chunks_cache.json"
+
+    if not cache_path.exists():
+        return {"chunks": [], "total": 0}, {}
+
+    current_mtime = cache_path.stat().st_mtime
+    if _chunks_cache_data is None or current_mtime > _chunks_cache_mtime:
+        with open(cache_path, "r", encoding="utf-8") as f:
+            _chunks_cache_data = json.load(f)
+        _chunks_cache_mtime = current_mtime
+        # 构建 chunk_id → chunk 索引
+        _chunks_cache_by_id = {}
+        for c in _chunks_cache_data.get("chunks", []):
+            cid = c.get("chunk_id")
+            if cid:
+                _chunks_cache_by_id[cid] = c
+        logger.debug(f"分块缓存已加载: {len(_chunks_cache_by_id)} 条")
+
+    return _chunks_cache_data, _chunks_cache_by_id
+
+
+@app.get("/api/chunks", tags=["知识库"])
+async def list_chunks(
+    page: int = Query(1, ge=1),
+    page_size: int = Query(20, ge=1, le=100),
+    search: str = Query(None),
+    knowledge_type: str = Query(None),
+):
+    """获取分块数据列表（支持分页、搜索、过滤）"""
+    cache, _ = _get_chunks_cache()
+
+    if not cache:
+        return {"chunks": [], "total": 0}
+
+    all_chunks = cache.get("chunks", [])
+
+    # 过滤
+    if knowledge_type:
+        all_chunks = [c for c in all_chunks if c.get("knowledge_type") == knowledge_type]
+
+    if search:
+        keyword = search.lower()
+        all_chunks = [c for c in all_chunks if keyword in c.get("content", "").lower()]
+
+    total = len(all_chunks)
+
+    # 分页
+    start = (page - 1) * page_size
+    end = start + page_size
+    page_chunks = all_chunks[start:end]
+
+    return {"chunks": page_chunks, "total": total}
+
+
+@app.get("/api/chunks/{chunk_id}", tags=["知识库"])
+async def get_chunk_detail(chunk_id: str):
+    """获取单个分块的完整内容"""
+    _, cache_by_id = _get_chunks_cache()
+
+    if not cache_by_id:
+        raise HTTPException(404, "分块数据不存在")
+
+    chunk = cache_by_id.get(chunk_id)
+    if chunk:
+        return chunk
+
+    raise HTTPException(404, f"分块 {chunk_id} 不存在")
 
 
 # ==================== SPA 前端 ====================
@@ -438,10 +668,10 @@ else:
 
 
 def start_server(host: str = None, port: int = None):
-    """启动 FastAPI 服务（LangChain 版本默认端口 18889，避免与原系统 18888 冲突）"""
+    """启动 FastAPI 服务"""
     import uvicorn
     host = host or Config.get("server.host", "0.0.0.0")
-    port = port or 18889  # LangChain 版本使用不同端口
+    port = port or Config.get("server.api_port", 18888)
     logger.info(f"启动 LangChain RAG 服务: http://localhost:{port}")
     uvicorn.run(app, host=host, port=port)
 

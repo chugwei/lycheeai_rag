@@ -55,6 +55,8 @@ class BM25Indexer:
         self.bm25: Optional[BM25Okapi] = None
         self.corpus_meta: List[dict] = []
         self._tokenizer_mode = get_config("bilingual.bm25_tokenizer", "auto")
+        self.k1 = get_config("bm25.k1", 1.5)
+        self.b = get_config("bm25.b", 0.75)
 
     # ─── 分词器 ───
 
@@ -132,16 +134,20 @@ class BM25Indexer:
         if not any(corpus_tokens):
             logger.warning("BM25 索引构建：所有文档分词结果为空，请检查语言检测配置")
             # 如果全空，提供一个空 BM25 避免后续崩溃
-            self.bm25 = BM25Okapi([[]])
+            self.bm25 = BM25Okapi([[]], k1=self.k1, b=self.b)
         else:
-            self.bm25 = BM25Okapi(corpus_tokens)
+            self.bm25 = BM25Okapi(corpus_tokens, k1=self.k1, b=self.b)
 
         # 持久化
-        with open(self.index_path, 'wb') as f:
+        tmp_path = self.index_path.with_suffix(self.index_path.suffix + ".tmp")
+        with open(tmp_path, 'wb') as f:
             pickle.dump({
                 "bm25": self.bm25,
-                "corpus_meta": self.corpus_meta
+                "corpus_meta": self.corpus_meta,
+                "chunk_count": len(self.corpus_meta),
             }, f)
+            f.flush()
+        tmp_path.replace(self.index_path)
 
         token_stats = sum(len(t) for t in corpus_tokens)
         logger.info(f"BM25 索引构建完成，持久化到 {self.index_path} （总 token 数: {token_stats}）")

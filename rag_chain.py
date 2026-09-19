@@ -16,11 +16,20 @@ LangChain RAG 管线 - 基于 LCEL 的完整 RAG 链
 12. 更新对话状态
 13. 置信度计算
 """
+import os
+import asyncio
+import queue
+import threading
+# 强制 HuggingFace 离线模式，模型已缓存到本地，避免联网超时
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 import sys
 import time
+import threading
 from pathlib import Path
 from dataclasses import dataclass, field
-from typing import List, Optional
+from typing import List, Optional, AsyncGenerator
 
 PROJECT_ROOT = Path(__file__).parent.parent
 if str(PROJECT_ROOT) not in sys.path:
@@ -75,6 +84,7 @@ class RAGResult:
     phenology: Optional[dict] = None
     image_analysis: Optional[dict] = None
     latency: float = 0.0
+    stage_timings: dict = field(default_factory=dict)  # 各阶段耗时（秒）
 
 
 class LangChainRAGPipeline:
@@ -140,6 +150,15 @@ class LangChainRAGPipeline:
             RAGResult 对象
         """
         start_time = time.time()
+        _stage_t = time.perf_counter()
+        stage_timings: dict = {}
+
+        def _mark(name):
+            """记录自上个标记以来的阶段耗时（秒）"""
+            nonlocal _stage_t
+            now = time.perf_counter()
+            stage_timings[name] = round(now - _stage_t, 4)
+            _stage_t = now
 
         # Step 1: 获取/创建对话状态
         state = self.state_manager.get_or_create(conversation_id)
@@ -157,11 +176,13 @@ class LangChainRAGPipeline:
         state.current_phenology = phenology_info
 
         logger.info(f"查询意图: {intent}, 物候期: {phenology_info}")
+        _mark("query_parse")
 
         # Step 3: 图像分析（如有图片）
         image_analysis = None
         if image_bytes:
             image_analysis = self._analyze_image(image_bytes, image_api_type)
+            _mark("image_analysis")
 
         # Step 4: 查询扩展（领域词典 + LLM改写）
         expansion_queries = None
@@ -193,8 +214,11 @@ class LangChainRAGPipeline:
             filters["phenology_stage"] = phenology_info["name"]
             logger.debug(f"启用物候期过滤: intent={intent}, stage={phenology_info['name']}")
 
+        _mark("query_prep")  # 词典扩展 + 动态权重 + 过滤条件
+
         # Step 7: 并行检索
         retrieval_start = time.time()
+        _retrieval_timings: dict = {}
         all_results = parallel_retrieve(
             query=query,
             vector_retriever=self.vector_retriever,
@@ -202,8 +226,14 @@ class LangChainRAGPipeline:
             filters=filters,
             expansion_queries=expansion_queries,
             language=query_lang,
+            timings=_retrieval_timings,
         )
         logger.info(f"多路检索完成: {list(all_results.keys())}, 耗时 {time.time()-retrieval_start:.2f}s")
+        _mark("retrieval")
+        if _retrieval_timings.get("vector") is not None:
+            stage_timings["retrieval_vector"] = round(_retrieval_timings["vector"], 4)
+        if _retrieval_timings.get("bm25") is not None:
+            stage_timings["retrieval_bm25"] = round(_retrieval_timings["bm25"], 4)
 
         # Step 8: RRF 融合
         fused_results = rrf_fusion(
@@ -212,6 +242,7 @@ class LangChainRAGPipeline:
             k=get_config("retrieval.rrf_k", 60),
             top_k=20,
         )
+        _mark("rrf_fusion")
 
         # Step 9: Rerank 精排
         top_k = get_config("reranker.top_k", 5)
@@ -226,6 +257,7 @@ class LangChainRAGPipeline:
             for r in fused_results
         ]
         reranked_docs = self.reranker.compress_documents(fused_docs, query)
+        _mark("rerank")
 
         # 转换回 dict 格式
         top_docs = []
@@ -261,18 +293,25 @@ class LangChainRAGPipeline:
         except Exception as e:
             logger.error(f"LLM 生成失败: {e}")
             llm_response = self._fallback_response(query, top_docs, intent)
+        _mark("llm_generate")
 
         # Step 12: 后处理
         answer, sources = extract_citations(llm_response, top_docs)
+        _mark("post_process")
 
         # Step 12.5: 词典自动沉淀（异步，不影响主流程）
-        self.domain_learner.maybe_learn(query, parsed.entities, answer)
+        threading.Thread(
+            target=self.domain_learner.maybe_learn,
+            args=(query, parsed.entities, answer),
+            daemon=True,
+        ).start()
 
         # Step 13: 更新对话状态
         self.state_manager.update(state, query, answer)
 
         # Step 14: 置信度计算
         confidence = compute_confidence(top_docs, intent)
+        _mark("confidence")
 
         latency = time.time() - start_time
         logger.info(f"RAG 完成: intent={intent}, confidence={confidence:.2f}, latency={latency:.2f}s")
@@ -287,7 +326,254 @@ class LangChainRAGPipeline:
             phenology=phenology_info,
             image_analysis=image_analysis,
             latency=latency,
+            stage_timings=stage_timings,
         )
+
+    async def run_stream(
+        self,
+        query: str,
+        image_bytes: bytes = None,
+        image_api_type: str = "guoshi",
+        conversation_id: str = None,
+        phenology_date: str = None,
+        use_query_expansion: bool = False,
+    ) -> AsyncGenerator[dict, None]:
+        """
+        RAG 管线流式输出（SSE）
+
+        Yield 事件格式:
+            {"type": "sources", "data": [...]}
+            {"type": "chunk", "data": {"text": "..."}}
+            {"type": "done", "data": {...}}
+            {"type": "error", "data": {"message": "..."}}
+        """
+        start_time = time.time()
+        _stage_t = time.perf_counter()
+        stage_timings: dict = {}
+
+        def _mark(name):
+            """记录自上个标记以来的阶段耗时（秒）"""
+            nonlocal _stage_t
+            now = time.perf_counter()
+            stage_timings[name] = round(now - _stage_t, 4)
+            _stage_t = now
+
+        # ── Phase 1: 检索（复用 run() 的步骤 1-9） ──
+        try:
+            state = self.state_manager.get_or_create(conversation_id)
+
+            parsed = parse_query(
+                query=query,
+                has_image=(image_bytes is not None),
+                phenology_date=phenology_date,
+            )
+            intent = parsed.intent
+            phenology_info = parsed.phenology
+            query_lang = parsed.language
+            state.current_intent = intent
+            state.current_phenology = phenology_info
+
+            logger.info(f"[stream] 查询意图: {intent}, 物候期: {phenology_info}")
+            _mark("query_parse")
+
+            image_analysis = None
+            if image_bytes:
+                image_analysis = self._analyze_image(image_bytes, image_api_type)
+                _mark("image_analysis")
+
+            expansion_queries = None
+            dict_variants = self.domain_expander.expand_query(query)
+            has_domain_terms = self.domain_expander.has_domain_terms(query)
+            if len(dict_variants) > 1:
+                expansion_queries = dict_variants
+            if use_query_expansion:
+                llm_rewrites = self._expand_query(query)
+                if llm_rewrites:
+                    if expansion_queries:
+                        expansion_queries.extend(llm_rewrites)
+                    else:
+                        expansion_queries = [query] + llm_rewrites
+
+            weights = DynamicWeightAdjuster.adjust(
+                intent, phenology_info, language=query_lang,
+                has_domain_terms=has_domain_terms
+            )
+
+            filters = {}
+            phenology_filter_intents = {"agronomy"}
+            if phenology_info and intent in phenology_filter_intents:
+                filters["phenology_stage"] = phenology_info["name"]
+
+            _mark("query_prep")
+
+            retrieval_start = time.time()
+            _retrieval_timings: dict = {}
+            all_results = await asyncio.to_thread(
+                parallel_retrieve,
+                query=query,
+                vector_retriever=self.vector_retriever,
+                bm25_retriever=self.bm25_retriever,
+                filters=filters,
+                expansion_queries=expansion_queries,
+                language=query_lang,
+                timings=_retrieval_timings,
+            )
+            logger.info(f"[stream] 多路检索完成: {list(all_results.keys())}, 耗时 {time.time()-retrieval_start:.2f}s")
+            _mark("retrieval")
+            if _retrieval_timings.get("vector") is not None:
+                stage_timings["retrieval_vector"] = round(_retrieval_timings["vector"], 4)
+            if _retrieval_timings.get("bm25") is not None:
+                stage_timings["retrieval_bm25"] = round(_retrieval_timings["bm25"], 4)
+
+            fused_results = rrf_fusion(
+                all_results,
+                weights=weights,
+                k=get_config("retrieval.rrf_k", 60),
+                top_k=20,
+            )
+            _mark("rrf_fusion")
+
+            top_k = get_config("reranker.top_k", 5)
+            from langchain_core.documents import Document as LCDocument
+            fused_docs = [
+                LCDocument(
+                    page_content=r["text"],
+                    metadata={**r.get("metadata", {}), "rrf_score": r["rrf_score"],
+                              "retrieval_paths": r["retrieval_paths"], "source": r["source"]},
+                )
+                for r in fused_results
+            ]
+            reranked_docs = await asyncio.to_thread(
+                self.reranker.compress_documents, fused_docs, query
+            )
+            _mark("rerank")
+
+            top_docs = []
+            for doc in reranked_docs:
+                top_docs.append({
+                    "id": doc.metadata.get("chunk_id", ""),
+                    "text": doc.page_content,
+                    "source": doc.metadata.get("source", ""),
+                    "page": doc.metadata.get("page", 0),
+                    "score": doc.metadata.get("score", 0),
+                    "rrf_score": doc.metadata.get("rrf_score", 0),
+                    "rerank_score": doc.metadata.get("rerank_score", 0),
+                    "retrieval_paths": doc.metadata.get("retrieval_paths", []),
+                    "metadata": doc.metadata,
+                })
+
+            state.last_retrieved_docs = top_docs
+
+            # ── 发送 sources 事件 ──
+            sources_for_client = [
+                {
+                    "ref_id": i + 1,
+                    "source": doc.get("source", ""),
+                    "chunk_id": doc.get("id", ""),
+                    "rerank_score": doc.get("rerank_score", 0),
+                }
+                for i, doc in enumerate(top_docs)
+            ]
+            yield {"type": "sources", "data": sources_for_client}
+
+            # ── Phase 2: Prompt 组装 + LLM 流式生成 ──
+            _mark("prompt_build")
+            messages = build_chat_messages(
+                query=query,
+                docs=top_docs,
+                intent=intent,
+                phenology=phenology_info,
+                image_analysis=image_analysis,
+                history=state.history,
+            )
+
+            full_text = ""
+            try:
+                # 用线程+队列将同步 stream 转为异步
+                q: queue.Queue = queue.Queue()
+                max_retries = 2
+
+                def _stream_worker():
+                    for attempt in range(max_retries):
+                        try:
+                            for chunk in self.llm.stream(messages):
+                                q.put(chunk.content)
+                            # 成功，放入结束标记并返回
+                            q.put(None)
+                            return
+                        except Exception as e:
+                            if attempt < max_retries - 1:
+                                # 重试前清空队列，避免重复
+                                while not q.empty():
+                                    q.get()
+                                logger.warning(f"[stream] LLM 第 {attempt+1} 次尝试失败，重试中: {e}")
+                                continue
+                            # 最后尝试也失败
+                            q.put(f"__ERROR__:{e}")
+                            q.put(None)
+
+                thread = threading.Thread(target=_stream_worker, daemon=True)
+                thread.start()
+
+                while True:
+                    token = await asyncio.to_thread(q.get)
+                    if token is None:
+                        break
+                    if isinstance(token, str) and token.startswith("__ERROR__:"):
+                        raise Exception(token[9:])
+                    full_text += token
+                    yield {"type": "chunk", "data": {"text": token}}
+
+            except Exception as e:
+                logger.error(f"[stream] LLM 生成失败: {e}")
+                full_text = self._fallback_response(query, top_docs, intent)
+                # 降级时一次性返回完整文本
+                yield {"type": "chunk", "data": {"text": full_text}}
+
+            _mark("llm_generate")
+
+            # ── Phase 3: 后处理 ──
+            answer, sources = await asyncio.to_thread(
+                extract_citations, full_text, top_docs
+            )
+            _mark("post_process")
+
+            # 词典自动沉淀（异步，不影响主流程）
+            threading.Thread(
+                target=self.domain_learner.maybe_learn,
+                args=(query, parsed.entities, answer),
+                daemon=True,
+            ).start()
+
+            # 更新对话状态
+            self.state_manager.update(state, query, answer)
+
+            # 置信度计算
+            confidence = compute_confidence(top_docs, intent)
+            _mark("confidence")
+            latency = time.time() - start_time
+
+            logger.info(f"[stream] RAG 完成: intent={intent}, confidence={confidence:.2f}, latency={latency:.2f}s")
+
+            # ── 发送 done 事件 ──
+            yield {
+                "type": "done",
+                "data": {
+                    "intent": intent,
+                    "confidence": confidence,
+                    "conversation_id": state.conversation_id,
+                    "retrieval_paths_used": list(all_results.keys()),
+                    "phenology": phenology_info,
+                    "image_analysis": image_analysis,
+                    "latency": latency,
+                    "stage_timings": stage_timings,
+                    "sources": sources,
+                },
+            }
+
+        except Exception as e:
+            logger.error(f"[stream] 管线异常: {e}")
+            yield {"type": "error", "data": {"message": str(e)}}
 
     def _analyze_image(self, image_bytes: bytes, api_type: str) -> dict:
         """调用外部图像识别 API"""

@@ -4,6 +4,7 @@
 封装现有 VectorSearcher 和 BM25Indexer 为 LangChain BaseRetriever。
 """
 import sys
+import time
 from pathlib import Path
 from typing import Any, List, Optional, Dict
 from concurrent.futures import ThreadPoolExecutor
@@ -60,13 +61,12 @@ class MilvusMySQLRetriever(BaseRetriever):
         filters: Optional[dict] = None,
         expansion_queries: Optional[List[str]] = None,
     ) -> List[LCDocument]:
-        """执行向量检索"""
+        """执行向量检索（仅用原始 query，语义泛化）"""
         try:
             results = _get_vector_searcher().search(
                 query=query,
                 top_k=self.top_k,
                 filters=filters,
-                expansion_queries=expansion_queries,
             )
             return self._to_langchain_docs(results)
         except Exception as e:
@@ -114,16 +114,38 @@ class BM25Retriever(BaseRetriever):
         *,
         run_manager: Optional[CallbackManagerForRetrieverRun] = None,
         filters: Optional[dict] = None,
+        expansion_queries: Optional[List[str]] = None,
     ) -> List[LCDocument]:
-        """执行 BM25 检索"""
+        """
+        执行 BM25 检索（支持扩展查询）
+
+        与向量检索保持一致：如果有扩展查询（口语→专业术语），
+        每个变体分别检索后合并去重，提升精确匹配的召回率。
+        """
         try:
-            results = _get_bm25_indexer().search(
-                query=query,
-                top_k=self.top_k,
-                filters=filters,
-                language=self.language,
-            )
-            return self._to_langchain_docs(results)
+            queries = [query]
+            if expansion_queries:
+                queries.extend(expansion_queries)
+
+            all_results = []
+            for q in queries:
+                results = _get_bm25_indexer().search(
+                    query=q,
+                    top_k=self.top_k,
+                    filters=filters,
+                    language=self.language,
+                )
+                all_results.extend(results)
+
+            # 按 chunk_id 去重，保留最高分
+            seen = {}
+            for r in all_results:
+                cid = r.get("chunk_id", r.get("id", ""))
+                if cid not in seen or r.get("score", 0) > seen[cid].get("score", 0):
+                    seen[cid] = r
+
+            deduplicated = sorted(seen.values(), key=lambda x: x.get("score", 0), reverse=True)
+            return self._to_langchain_docs(deduplicated[:self.top_k])
         except Exception as e:
             logger.warning(f"BM25 检索失败: {e}")
             return []
@@ -135,6 +157,7 @@ class BM25Retriever(BaseRetriever):
         for r in results:
             metadata = {
                 "source": r.get("source", ""),
+                "page": r.get("page", 0),
                 "score": r.get("score", 0),
                 "chunk_id": r.get("id", ""),
                 "retrieval_paths": ["bm25"],
@@ -156,6 +179,7 @@ def parallel_retrieve(
     filters: Optional[dict] = None,
     expansion_queries: Optional[List[str]] = None,
     language: str = "zh",
+    timings: Optional[dict] = None,
 ) -> Dict[str, List[LCDocument]]:
     """
     并行执行向量检索和 BM25 检索
@@ -167,6 +191,7 @@ def parallel_retrieve(
         filters: 过滤条件
         expansion_queries: 扩展查询
         language: 语言
+        timings: 可选，接收 {"vector": 秒, "bm25": 秒} 的耗时记录
 
     Returns:
         {"vector": [...], "bm25": [...]}
@@ -174,22 +199,30 @@ def parallel_retrieve(
     results = {}
 
     def _vector_search():
+        t0 = time.time()
         try:
-            return vector_retriever._get_relevant_documents(
+            res = vector_retriever._get_relevant_documents(
                 query, filters=filters, expansion_queries=expansion_queries
             )
         except Exception as e:
             logger.warning(f"向量检索失败: {e}")
-            return []
+            res = []
+        if timings is not None:
+            timings["vector"] = time.time() - t0
+        return res
 
     def _bm25_search():
+        t0 = time.time()
         try:
-            return bm25_retriever._get_relevant_documents(
-                query, filters=filters
+            res = bm25_retriever._get_relevant_documents(
+                query, filters=filters, expansion_queries=expansion_queries
             )
         except Exception as e:
             logger.warning(f"BM25 检索失败: {e}")
-            return []
+            res = []
+        if timings is not None:
+            timings["bm25"] = time.time() - t0
+        return res
 
     with ThreadPoolExecutor(max_workers=2) as executor:
         future_vec = executor.submit(_vector_search)

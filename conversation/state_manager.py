@@ -39,7 +39,7 @@ class StateManager:
 
         if self.storage == "redis":
             import redis
-            redis_url = get_config("conversation.redis_url")
+            redis_url = get_config("conversation.redis_url", "redis://localhost:6379")
             self.redis = redis.from_url(redis_url)
         else:
             self.conversations: dict = {}

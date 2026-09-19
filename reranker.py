@@ -41,20 +41,31 @@ class FlagEmbeddingReranker(BaseDocumentCompressor):
     def _load_model(self):
         """懒加载 Reranker 模型"""
         try:
-            import torch
             from FlagEmbedding import FlagReranker
+
+            from utils.device import get_devices
 
             model_name = get_config("reranker.model_name", "BAAI/bge-reranker-base")
             use_fp16 = get_config("reranker.use_fp16", True)
 
-            # CPU 模式自动禁用 fp16
-            if not torch.cuda.is_available() and use_fp16:
+            # 设备选择：统一走 utils.device，CUDA 可用时强制上 GPU。
+            # 注意：FlagReranker 在 devices=None 时依赖加载瞬间的
+            # torch.cuda.is_available() 自动选设备，若服务在 CUDA 就绪前启动
+            # 会静默降级到 CPU（实测 20 篇候选 ~13s）。因此显式指定设备，
+            # 避免受启动时机影响。
+            devices = get_devices()
+            if devices[0].startswith("cuda"):
+                # GPU 上 fp16 更快且省显存，bge-reranker-base fp16 安全
+                if not use_fp16:
+                    use_fp16 = True
+                    logger.info("CUDA 可用: Reranker 强制 cuda:0 并启用 fp16")
+            else:
                 use_fp16 = False
-                logger.info("CPU 模式: Reranker 自动关闭 fp16, 使用 float32")
+                logger.info("CPU 模式: Reranker 关闭 fp16, 使用 float32")
 
-            logger.info(f"正在加载 Reranker 模型: {model_name}")
-            self.model = FlagReranker(model_name, use_fp16=use_fp16)
-            logger.info(f"Reranker 模型已加载: {model_name}, use_fp16={use_fp16}")
+            logger.info(f"正在加载 Reranker 模型: {model_name} (devices={devices}, use_fp16={use_fp16})")
+            self.model = FlagReranker(model_name, use_fp16=use_fp16, devices=devices)
+            logger.info(f"Reranker 模型已加载: {model_name}, use_fp16={use_fp16}, devices={devices}")
         except Exception as e:
             logger.warning(f"Reranker 模型加载失败，将使用简化排序: {e}")
             self._available = False

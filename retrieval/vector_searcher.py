@@ -5,11 +5,17 @@
 - 查询Embedding缓存（LRU）
 - 扩展查询批量编码
 """
+import os
+# 强制 HuggingFace 离线模式，避免联网超时阻塞加载
+os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ.setdefault("TRANSFORMERS_OFFLINE", "1")
+
 from functools import lru_cache
 from typing import List, Optional
 from loguru import logger
 
 from config.settings import get_config
+from utils.device import get_device
 
 
 class VectorSearcher:
@@ -26,16 +32,28 @@ class VectorSearcher:
         self._embedding_cache = {}  # 优化4: 查询Embedding缓存
 
     def _get_encoder(self):
-        """懒加载 Embedding 模型（多语言版本 multilingual-e5-small）"""
+        """懒加载 Embedding 模型（当前使用 BAAI/bge-base-zh-v1.5）"""
         if self.encoder is None:
             from sentence_transformers import SentenceTransformer
             model_name = get_config("embedding.model_name")
             cache_dir = get_config("embedding.cache_dir")
+            _device = get_device()
+            logger.info(f"加载查询编码器: {model_name} (device={_device})")
             try:
-                self.encoder = SentenceTransformer(model_name, cache_folder=cache_dir)
+                self.encoder = SentenceTransformer(
+                    model_name, cache_folder=cache_dir,
+                    device=_device,
+                    local_files_only=True,  # 仅用本地缓存，避免联网超时
+                )
             except Exception:
                 fallback = get_config("embedding.fallback_model")
-                self.encoder = SentenceTransformer(fallback, cache_folder=cache_dir)
+                self.encoder = SentenceTransformer(
+                    fallback, cache_folder=cache_dir,
+                    device=_device,
+                    local_files_only=True,
+                )
+                model_name = fallback
+            self._active_model_name = model_name
         return self.encoder
 
     def _get_collection(self):
@@ -80,8 +98,9 @@ class VectorSearcher:
         """优化4: 带缓存的Embedding编码"""
         cache_key = text[:200]  # 取前200字作为缓存key
         if cache_key not in self._embedding_cache:
+            encoded = f"query: {text}" if "e5" in getattr(self, "_active_model_name", "").lower() else text
             self._embedding_cache[cache_key] = encoder.encode(
-                [text], normalize_embeddings=True
+                [encoded], normalize_embeddings=True
             )[0]
             # 缓存上限1000条，防止内存溢出
             if len(self._embedding_cache) > 1000:
@@ -94,34 +113,16 @@ class VectorSearcher:
     def search(self, query: str, top_k: int = 20,
                filters: dict = None,
                expansion_queries: List[str] = None) -> List[dict]:
-        """向量检索（优化5: 批量编码扩展查询）"""
+        """
+        向量检索（仅用原始 query，语义泛化）
+
+        向量检索的核心价值是语义泛化——"叶子长白毛"这种口语表达
+        靠语义相似度找到"霜疫霉病"文档。扩展查询交给 BM25 做精确匹配。
+        """
         encoder = self._get_encoder()
-
-        queries = [query]
-        if expansion_queries:
-            queries.extend(expansion_queries)
-
-        all_results = []
-
-        if len(queries) > 1:
-            # 优化5: 批量编码所有查询（一次性encode）
-            embeddings = encoder.encode(queries, normalize_embeddings=True)
-            for i, q in enumerate(queries):
-                # 优化4: 缓存主查询embedding
-                if i == 0:
-                    cache_key = q[:200]
-                    self._embedding_cache[cache_key] = embeddings[i]
-                results = self._search_single(embeddings[i], top_k, filters)
-                all_results.extend(results)
-        else:
-            # 单查询，使用缓存
-            embedding = self._get_cached_embedding(query, encoder)
-            results = self._search_single(embedding, top_k, filters)
-            all_results.extend(results)
-
-        deduplicated = self._deduplicate_by_text(all_results)
-        deduplicated.sort(key=lambda x: x["score"], reverse=True)
-        return deduplicated[:top_k]
+        embedding = self._get_cached_embedding(query, encoder)
+        results = self._search_single(embedding, top_k, filters)
+        return results[:top_k]
 
     def _search_single(self, embedding, top_k: int,
                        filters: dict) -> List[dict]:
@@ -323,16 +324,10 @@ class VectorSearcher:
         conditions = []
         if "knowledge_type" in filters:
             conditions.append(f'knowledge_type == "{filters["knowledge_type"]}"')
+        if "phenology_stage" in filters:
+            # phenology_stages 是逗号分隔字符串，如 "开花期,幼果期"
+            # 用 like 做模糊匹配
+            conditions.append(
+                f'phenology_stages like "%{filters["phenology_stage"]}%"'
+            )
         return " && ".join(conditions) if conditions else None
-
-    @staticmethod
-    def _deduplicate_by_text(results: List[dict]) -> List[dict]:
-        """基于文本内容去重"""
-        seen = set()
-        unique = []
-        for r in results:
-            text_hash = hash(r["text"][:200])
-            if text_hash not in seen:
-                seen.add(text_hash)
-                unique.append(r)
-        return unique

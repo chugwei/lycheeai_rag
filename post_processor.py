@@ -12,7 +12,8 @@ def clean_response(text: str) -> str:
     """
     清理 LLM 响应，去除思考过程/推理链，仅保留最终答案
 
-    4 层防御策略:
+    5 层防御策略:
+    0. 剥离 Markdown 格式标记（## 标题、**粗体**、- 列表等）
     1. 查找最后一个中文答案标记（【当前状况总结】【决策建议】等）
     2. 检测英文思考链，提取最后中文段落
     3. 检测中文思考链，从后往前找答案段落
@@ -20,6 +21,25 @@ def clean_response(text: str) -> str:
     """
     if not text:
         return text
+
+    # ─── 第0层：剥离 Markdown 格式标记 ───
+    lines = text.split('\n')
+    cleaned = []
+    for line in lines:
+        # 去掉行首的 # 标题标记（## 标题 → 标题）
+        line = re.sub(r'^#{1,6}\s+', '', line)
+        # 去掉粗体/斜体标记 **text** → text, *text* → text
+        line = re.sub(r'\*{1,2}(.+?)\*{1,2}', r'\1', line)
+        # 去掉行首的 - 列表标记（保留内容，加 • 前缀）
+        line = re.sub(r'^-\s+', '  • ', line)
+        # 去掉行首的数字编号 1. 2. 等
+        line = re.sub(r'^\d+\.\s+', '', line)
+        # 去掉 `代码` 标记
+        line = re.sub(r'`(.+?)`', r'\1', line)
+        cleaned.append(line)
+    text = '\n'.join(cleaned)
+    # 清理多余空行
+    text = re.sub(r'\n{3,}', '\n\n', text)
 
     # ─── 第1层：rfind 最后一个答案标记 ───
     answer_markers = [

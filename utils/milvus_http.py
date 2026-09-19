@@ -75,6 +75,21 @@ class MilvusHttpClient:
                     "elementTypeParams": {"max_length": 64},
                 },
                 {
+                    "name": "knowledge_type",
+                    "dataType": "VarChar",
+                    "elementTypeParams": {"max_length": 32},
+                },
+                {
+                    "name": "phenology_stages",
+                    "dataType": "VarChar",
+                    "elementTypeParams": {"max_length": 128},
+                },
+                {
+                    "name": "risk_level",
+                    "dataType": "VarChar",
+                    "elementTypeParams": {"max_length": 8},
+                },
+                {
                     "name": "embedding",
                     "dataType": "FloatVector",
                     "elementTypeParams": {"dim": str(dim)},

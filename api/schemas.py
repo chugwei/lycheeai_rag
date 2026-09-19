@@ -35,6 +35,7 @@ class QueryResponse(BaseModel):
     phenology: Optional[dict] = None
     image_analysis: Optional[dict] = None
     latency: float
+    stage_timings: dict = {}
 
 
 class ImageAnalysisRequest(BaseModel):
@@ -70,6 +71,7 @@ class LLMConfigRequest(BaseModel):
     base_url: Optional[str] = Field(None, description="API 地址")
     api_key: Optional[str] = Field(None, description="API 密钥 (仅 external 后端)")
     model: Optional[str] = Field(None, description="模型名称")
+    extra_body: Optional[str] = Field(None, description="额外请求体参数(JSON)，如 {\"enable_thinking\": false}")
 
 
 class LLMConfigResponse(BaseModel):
@@ -80,3 +82,4 @@ class LLMConfigResponse(BaseModel):
     model: Optional[str] = None
     api_key_configured: bool = False
     available_backends: List[str] = []
+    extra_body: Optional[str] = Field(None, description="当前 extra_body 配置")
